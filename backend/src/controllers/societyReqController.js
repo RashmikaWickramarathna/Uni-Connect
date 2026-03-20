@@ -1,4 +1,4 @@
-const SocietyRequest = require("../models/societyRequest");
+const SocietyRequest = require("../models/SocietyRequest");
 
 const createSocietyRequest = async (req, res) => {
   try {
