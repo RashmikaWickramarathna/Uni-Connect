@@ -52,4 +52,4 @@ const societyRequestSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("societyRequest", societyRequestSchema);
+module.exports = mongoose.model("SocietyRequest", societyRequestSchema);
