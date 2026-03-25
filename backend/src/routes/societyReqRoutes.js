@@ -9,9 +9,7 @@ router.get("/", getAllSocietyRequests);
 //Get by ID
 router.get("/:id", getSocietyRequestById);
 
-router.put("/approve/:id", approveSocietyRequest);
-
-router.put("/reject/:id", rejectSocietyRequest);
+// Approval and rejection are handled by the dedicated approval routes
 
 router.post("/register-approved", registerApprovedSociety);
 

@@ -66,48 +66,10 @@ const getSocietyRequestById = async (req, res) => {
 };
 
 const approveSocietyRequest = async (req, res) => {
-  try {
-    const request = await SocietyRequest.findById(req.params.id);
-
-    if (!request) {
-      return res.status(404).json({
-        message: "Society request not found"
-      });
-    }
-
-    if (request.status === "Approved") {
-      return res.status(400).json({
-        message: "Society request is already approved"
-      });
-    }
-
-    request.status = "Approved";
-    await request.save();
-
-    const token = crypto.randomBytes(32).toString("hex");
-
-    const approvalToken = new ApprovalToken({
-      societyRequestId: request._id,
-      officialEmail: request.officialEmail,
-      token: token,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-    });
-
-    await approvalToken.save();
-
-    const approvalLink = `http://localhost:3000/society-register/${token}`;
-
-    res.status(200).json({
-      message: "Society request approved successfully",
-      approvalLink,
-      data: request
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Failed to approve society request",
-      error: error.message
-    });
-  }
+  // Deprecated: approval should be performed via /api/society-approval/approve/:id
+  return res.status(405).json({
+    message: "Use /api/society-approval/approve/:id to approve societies (automatic flow)"
+  });
 };
 
 /*const rejectSocietyRequest = async (req, res) => {

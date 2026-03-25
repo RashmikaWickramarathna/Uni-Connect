@@ -1,76 +1,9 @@
 const crypto = require("crypto");
 const ApprovalToken = require("../models/approvalToken");
 const SocietyRequest = require("../models/SocietyRequest");
+const sendApprovalEmail = require("../utils/emailService");
 
-// Create approval token + link
-const createApprovalToken = async (req, res) => {
-  try {
-    const { societyRequestId } = req.body;
-
-    if (!societyRequestId) {
-      return res.status(400).json({
-        message: "societyRequestId is required"
-      });
-    }
-
-    const societyRequest = await SocietyRequest.findById(societyRequestId);
-
-    if (!societyRequest) {
-      return res.status(404).json({
-        message: "Society request not found"
-      });
-    }
-
-    // Adjust this field name if your model uses a different email field
-    const officialEmail =
-      societyRequest.officialEmail ||
-      societyRequest.email ||
-      societyRequest.contactEmail;
-
-    if (!officialEmail) {
-      return res.status(400).json({
-        message: "Official email not found in society request"
-      });
-    }
-
-    // remove previous unused tokens for same request
-    await ApprovalToken.deleteMany({
-      societyRequestId,
-      isUsed: false
-    });
-
-    const token = crypto.randomBytes(32).toString("hex");
-
-    const approvalToken = new ApprovalToken({
-      societyRequestId,
-      officialEmail,
-      token,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-      isUsed: false
-    });
-
-    await approvalToken.save();
-
-    societyRequest.status = "Approval Link Sent";
-    await societyRequest.save();
-
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    const approvalLink = `${frontendUrl}/society-register/${token}`;
-
-    return res.status(201).json({
-      message: "Approval token created successfully",
-      token,
-      approvalLink,
-      expiresAt: approvalToken.expiresAt
-    });
-  } catch (error) {
-    console.error("CREATE APPROVAL TOKEN ERROR:", error);
-    return res.status(500).json({
-      message: "Failed to create approval token",
-      error: error.message
-    });
-  }
-};
+// Note: manual token creation route removed to enforce single automatic approval flow.
 
 // Verify token
 const verifyApprovalToken = async (req, res) => {
@@ -157,8 +90,123 @@ const useApprovalToken = async (req, res) => {
   }
 };
 
+// Approve society and auto-send email
+const approveSociety = async (req, res) => {
+  try {
+    const society = await SocietyRequest.findById(req.params.id);
+
+    if (!society) {
+      return res.status(404).json({ message: "Society not found" });
+    }
+
+    if (society.status === "Rejected") {
+      return res.status(400).json({
+        message: "Cannot approve rejected society"
+      });
+    }
+
+    const officialEmail =
+      society.officialEmail ||
+      society.email ||
+      society.contactEmail;
+
+    if (!officialEmail) {
+      return res.status(400).json({
+        message: "Official email not found"
+      });
+    }
+
+    await ApprovalToken.deleteMany({
+      societyRequestId: society._id,
+      isUsed: false
+    });
+
+    const token = crypto.randomBytes(32).toString("hex");
+
+    const approvalToken = new ApprovalToken({
+      societyRequestId: society._id,
+      officialEmail,
+      token,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      isUsed: false
+    });
+
+    await approvalToken.save();
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    // Link should point to the frontend registration route
+    const link = `${frontendUrl}/society-register/${token}`;
+
+    society.status = "Approved";
+    society.approvalToken = token;
+    society.approvalLink = link;
+
+    await society.save();
+
+    // Attempt to send email but do not fail the approval if email sending fails.
+    try {
+      await sendApprovalEmail(
+        officialEmail,
+        society.societyName || society.name || "Society",
+        link
+      );
+
+      return res.json({
+        message: "Society approved and email sent successfully",
+        approvalLink: link
+      });
+    } catch (emailErr) {
+      console.error("APPROVAL EMAIL FAILED:", emailErr);
+      return res.status(200).json({
+        message: "Society approved. Email notification pending.",
+        approvalLink: link,
+        emailError: emailErr.message
+      });
+    }
+  } catch (err) {
+    console.error("APPROVE SOCIETY ERROR:", err);
+    return res.status(500).json({
+      message: "Server error",
+      error: err.message
+    });
+  }
+};
+
+// Reject society
+const rejectSociety = async (req, res) => {
+  try {
+    const society = await SocietyRequest.findById(req.params.id);
+
+    if (!society) {
+      return res.status(404).json({ message: "Society not found" });
+    }
+
+    society.status = "Rejected";
+    society.approvalToken = null;
+    society.approvalLink = null;
+
+    await ApprovalToken.deleteMany({
+      societyRequestId: society._id,
+      isUsed: false
+    });
+
+    await society.save();
+
+    return res.json({
+      message: "Society rejected successfully"
+    });
+  } catch (err) {
+    console.error("REJECT SOCIETY ERROR:", err);
+    return res.status(500).json({
+      message: "Server error",
+      error: err.message
+    });
+  }
+};
+
 module.exports = {
-  createApprovalToken,
   verifyApprovalToken,
-  useApprovalToken
+  useApprovalToken,
+  approveSociety,
+  rejectSociety
 };
