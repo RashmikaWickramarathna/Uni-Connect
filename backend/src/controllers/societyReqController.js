@@ -72,31 +72,7 @@ const approveSocietyRequest = async (req, res) => {
   });
 };
 
-/*const rejectSocietyRequest = async (req, res) => {
-  try {
-    const request = await SocietyRequest.findById(req.params.id);
 
-    if (!request) {
-      return res.status(404).json({
-        message: "Society request not found"
-      });
-    }
-
-    request.status = "Rejected";
-    request.rejectionReason = req.body.reason || "";
-    await request.save();
-
-    res.status(200).json({
-      message: "Society request rejected successfully",
-      data: request
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Failed to reject society request",
-      error: error.message
-    });
-  }
-};*/
 const rejectSocietyRequest = async (req, res) => {
   try {
     const request = await SocietyRequest.findById(req.params.id);
