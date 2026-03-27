@@ -107,11 +107,21 @@ export default function SocietyRequestsAdmin() {
             <SmallStatCard label="Rejected" value={requests.filter(r => (r.status||'').toLowerCase() === 'rejected').length} color="#ef4444" icon="✖️" />
           </div>
 
-              <ToastMessage
-                type={toast.type}
-                message={toast.message}
-                onClose={() => setToast({ type: "info", message: "" })}
-              />
+          {toast.type === 'error' && (
+            <div className="error-banner">
+              <div className="error-text">{toast.message || 'Failed to fetch society requests'}</div>
+              <div className="error-actions">
+                <button className="btn" onClick={() => { setToast({ type: 'info', message: '' }); loadRequests(); }}>Retry</button>
+                <button className="btn" onClick={() => setToast({ type: 'info', message: '' })}>Dismiss</button>
+              </div>
+            </div>
+          )}
+
+          <ToastMessage
+            type={toast.type}
+            message={toast.message}
+            onClose={() => setToast({ type: "info", message: "" })}
+          />
 
               {loading ? (
                 <LoadingSpinner />
