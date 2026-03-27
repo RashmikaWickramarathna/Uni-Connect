@@ -116,6 +116,20 @@ export const validateForm = (formData) => {
     errors.push("President's phone number must be exactly 10 digits");
   }
 
+  // Validate vice president
+  if (!validateName(formData.vicePresident.name)) {
+    errors.push("Vice President name can only contain letters");
+  }
+  if (!validateDesignation(formData.vicePresident.designation)) {
+    errors.push("Vice President designation can only contain letters");
+  }
+  if (!validateStudentId(formData.vicePresident.studentId, formData.vicePresident.faculty)) {
+    errors.push(`Vice President's ${getStudentIdErrorMessage(formData.vicePresident.faculty)}`);
+  }
+  if (!validatePhoneNumber(formData.vicePresident.phone)) {
+    errors.push("Vice President's phone number must be exactly 10 digits");
+  }
+
   // Validate secretary
   if (!validateName(formData.secretary.name)) {
     errors.push("Secretary name can only contain letters");

@@ -25,6 +25,19 @@ export const initialFormData = {
   objectives: "",
   officialEmail: "",
   contactNumber: "",
+  bankAccount: {
+    accountHolderName: "",
+    accountNumber: "",
+    bankName: "",
+    branchName: "",
+  },
+  signatureLetter: {
+    presidentSigned: false,
+    vicePresidentSigned: false,
+    secretarySigned: false,
+    treasurerSigned: false,
+    letterFile: null,
+  },
   advisor: {
     ...emptyAdvisor,
     designation: "Advisor",
@@ -32,6 +45,10 @@ export const initialFormData = {
   president: {
     ...emptyMember,
     designation: "President",
+  },
+  vicePresident: {
+    ...emptyMember,
+    designation: "Vice President",
   },
   secretary: {
     ...emptyMember,

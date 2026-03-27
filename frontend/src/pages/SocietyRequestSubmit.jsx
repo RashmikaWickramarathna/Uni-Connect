@@ -190,6 +190,13 @@ export default function SocietyRequestSubmit() {
         />
 
         <MemberFields
+          title="Vice President Information"
+          data={formData.vicePresident}
+          onChange={handleNestedChange}
+          prefix="vicePresident"
+        />
+
+        <MemberFields
           title="Secretary Information"
           data={formData.secretary}
           onChange={handleNestedChange}
@@ -202,6 +209,90 @@ export default function SocietyRequestSubmit() {
           onChange={handleNestedChange}
           prefix="treasurer"
         />
+
+        <div className="card">
+          <h3>Bank Account Information</h3>
+          <p className="section-note">Society/Club must have a bank account in their official name</p>
+          <div className="grid two">
+            <input
+              type="text"
+              placeholder="Account Holder Name (Society Official Name)"
+              value={formData.bankAccount.accountHolderName}
+              onChange={(e) => handleNestedChange("bankAccount", "accountHolderName", e.target.value)}
+              {...getNameValidationProps()}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Account Number"
+              value={formData.bankAccount.accountNumber}
+              onChange={(e) => handleNestedChange("bankAccount", "accountNumber", e.target.value)}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Bank Name"
+              value={formData.bankAccount.bankName}
+              onChange={(e) => handleNestedChange("bankAccount", "bankName", e.target.value)}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Branch Name"
+              value={formData.bankAccount.branchName}
+              onChange={(e) => handleNestedChange("bankAccount", "branchName", e.target.value)}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="card">
+          <h3>Signature Letter</h3>
+          <p className="section-note">Submit a letter with signatures from the following officers:</p>
+          <div className="signature-checklist">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={formData.signatureLetter.presidentSigned}
+                onChange={(e) => handleNestedChange("signatureLetter", "presidentSigned", e.target.checked)}
+              />
+              <span>President Signed</span>
+            </label>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={formData.signatureLetter.vicePresidentSigned}
+                onChange={(e) => handleNestedChange("signatureLetter", "vicePresidentSigned", e.target.checked)}
+              />
+              <span>Vice President Signed</span>
+            </label>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={formData.signatureLetter.secretarySigned}
+                onChange={(e) => handleNestedChange("signatureLetter", "secretarySigned", e.target.checked)}
+              />
+              <span>Secretary Signed</span>
+            </label>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={formData.signatureLetter.treasurerSigned}
+                onChange={(e) => handleNestedChange("signatureLetter", "treasurerSigned", e.target.checked)}
+              />
+              <span>Treasurer Signed</span>
+            </label>
+          </div>
+          <div className="file-upload">
+            <label htmlFor="signature-letter">Upload Signature Letter (PDF/Image):</label>
+            <input
+              type="file"
+              id="signature-letter"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={(e) => handleNestedChange("signatureLetter", "letterFile", e.target.files[0])}
+            />
+          </div>
+        </div>
 
         <div className="card">
           <div className="row-between">
