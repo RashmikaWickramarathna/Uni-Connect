@@ -4,6 +4,15 @@ import MemberFields from "../components/MemberFields";
 import ToastMessage from "../components/ToastMessage";
 import { initialFormData, emptyMember } from "../utils/initialFormData";
 import { submitSocietyRequest } from "../api/societyApi";
+import { 
+  validateForm, 
+  facultyOptions, 
+  categoryOptions,
+  academicYearOptions,
+  getPhoneValidationProps,
+  getNameValidationProps,
+  getDesignationValidationProps
+} from "../utils/validation";
 
 export default function SocietyRequestSubmit() {
   const [formData, setFormData] = useState(initialFormData);
@@ -56,6 +65,17 @@ export default function SocietyRequestSubmit() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate form before submission
+    const validationErrors = validateForm(formData);
+    if (validationErrors.length > 0) {
+      setToast({
+        type: "error",
+        message: validationErrors.join("\n"),
+      });
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -94,6 +114,7 @@ export default function SocietyRequestSubmit() {
               placeholder="Society Name"
               value={formData.societyName}
               onChange={(e) => handleRootChange("societyName", e.target.value)}
+              {...getNameValidationProps()}
               required
             />
             <input
@@ -102,20 +123,26 @@ export default function SocietyRequestSubmit() {
               value={formData.shortName}
               onChange={(e) => handleRootChange("shortName", e.target.value)}
             />
-            <input
-              type="text"
-              placeholder="Category"
+            <select
               value={formData.category}
               onChange={(e) => handleRootChange("category", e.target.value)}
               required
-            />
-            <input
-              type="text"
-              placeholder="Faculty"
+            >
+              <option value="">Select Category</option>
+              {categoryOptions.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+            <select
               value={formData.faculty}
               onChange={(e) => handleRootChange("faculty", e.target.value)}
               required
-            />
+            >
+              <option value="">Select Faculty</option>
+              {facultyOptions.map((fac) => (
+                <option key={fac} value={fac}>{fac}</option>
+              ))}
+            </select>
             <input
               type="email"
               placeholder="Official Email"
@@ -124,10 +151,11 @@ export default function SocietyRequestSubmit() {
               required
             />
             <input
-              type="text"
-              placeholder="Contact Number"
+              type="tel"
+              placeholder="Contact Number (10 digits)"
               value={formData.contactNumber}
               onChange={(e) => handleRootChange("contactNumber", e.target.value)}
+              {...getPhoneValidationProps()}
               required
             />
           </div>
@@ -199,23 +227,25 @@ export default function SocietyRequestSubmit() {
               <div className="grid two">
                 <input
                   type="text"
-                  placeholder="Name"
+                  placeholder="Name (letters only)"
                   value={member.name}
                   onChange={(e) => handleExecutiveChange(index, "name", e.target.value)}
+                  {...getNameValidationProps()}
                   required
                 />
                 <input
                   type="text"
-                  placeholder="Student ID"
+                  placeholder="Student ID (e.g., IT123456)"
                   value={member.studentId}
                   onChange={(e) => handleExecutiveChange(index, "studentId", e.target.value)}
                   required
                 />
                 <input
                   type="text"
-                  placeholder="Designation"
+                  placeholder="Designation (letters only)"
                   value={member.designation}
                   onChange={(e) => handleExecutiveChange(index, "designation", e.target.value)}
+                  {...getDesignationValidationProps()}
                   required
                 />
                 <input
@@ -226,26 +256,33 @@ export default function SocietyRequestSubmit() {
                   required
                 />
                 <input
-                  type="text"
-                  placeholder="Phone"
+                  type="tel"
+                  placeholder="Phone (10 digits)"
                   value={member.phone}
                   onChange={(e) => handleExecutiveChange(index, "phone", e.target.value)}
+                  {...getPhoneValidationProps()}
                   required
                 />
-                <input
-                  type="text"
-                  placeholder="Faculty"
+                <select
                   value={member.faculty}
                   onChange={(e) => handleExecutiveChange(index, "faculty", e.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder="Academic Year"
+                  required
+                >
+                  <option value="">Select Faculty</option>
+                  {facultyOptions.map((fac) => (
+                    <option key={fac} value={fac}>{fac}</option>
+                  ))}
+                </select>
+                <select
                   value={member.academicYear}
-                  onChange={(e) =>
-                    handleExecutiveChange(index, "academicYear", e.target.value)
-                  }
-                />
+                  onChange={(e) => handleExecutiveChange(index, "academicYear", e.target.value)}
+                  required
+                >
+                  <option value="">Select Academic Year</option>
+                  {academicYearOptions.map((year) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
               </div>
             </div>
           ))}
