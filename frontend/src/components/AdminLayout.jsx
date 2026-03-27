@@ -3,14 +3,17 @@ import { Link } from "react-router-dom";
 import "../styles/admin.css";
 
 const MenuItem = ({ icon, label, active, onClick }) => (
-  <button className={`menu-item ${active ? "active" : ""}`} onClick={onClick}>
+  <button 
+    className={`menu-item ${active ? "active" : ""}`} 
+    onClick={onClick}
+  >
     <span className="mi-icon" aria-hidden>{icon}</span>
     <span className="mi-label">{label}</span>
   </button>
 );
 
 export default function AdminLayout({ children, title = "Uni-Connect - Admin Panel", subtitle = "Society and Club Management System" }) {
-  const [active, setActive] = useState("Dashboard");
+  const [active, setActive] = useState("Society Approvals");
 
   const menu = [
     "Dashboard",
