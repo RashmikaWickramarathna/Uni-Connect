@@ -7,8 +7,8 @@ export default function Layout({ children, fullWidth = false }) {
         <div className="container topbar-inner">
           <h1>UNI-CONNECT</h1>
           <nav>
-            <Link to="/">Submit Request</Link>
-            <Link to="/admin/requests">Admin</Link>
+            <Link to="/">Register Society</Link>
+            
           </nav>
         </div>
       </header>
