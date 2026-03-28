@@ -15,7 +15,7 @@ const HeroSection = () => {
       <div className="hero-content">
         <div className="hero-badge">
           <span className="badge-icon">🎓</span>
-          <span>University Event Management</span>
+          <span>University Event and Club Management</span>
         </div>
         
         <h1 className="hero-title">

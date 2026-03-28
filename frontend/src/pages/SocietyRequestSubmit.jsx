@@ -256,31 +256,11 @@ export default function SocietyRequestSubmit() {
                 checked={formData.signatureLetter.presidentSigned}
                 onChange={(e) => handleNestedChange("signatureLetter", "presidentSigned", e.target.checked)}
               />
-              <span>President Signed</span>
-            </label>
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={formData.signatureLetter.vicePresidentSigned}
-                onChange={(e) => handleNestedChange("signatureLetter", "vicePresidentSigned", e.target.checked)}
-              />
-              <span>Vice President Signed</span>
-            </label>
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={formData.signatureLetter.secretarySigned}
-                onChange={(e) => handleNestedChange("signatureLetter", "secretarySigned", e.target.checked)}
-              />
-              <span>Secretary Signed</span>
-            </label>
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={formData.signatureLetter.treasurerSigned}
-                onChange={(e) => handleNestedChange("signatureLetter", "treasurerSigned", e.target.checked)}
-              />
-              <span>Treasurer Signed</span>
+              
+              
+              
+              <p>I/We hereby confirm that the society has read, understood, and agreed to all terms and conditions, rules, and regulations 
+                of the university regarding society registration and operation.</p>
             </label>
           </div>
           <div className="file-upload">
