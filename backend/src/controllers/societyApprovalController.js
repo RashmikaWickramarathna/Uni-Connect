@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const ApprovalToken = require("../models/approvalToken");
 const SocietyRequest = require("../models/SocietyRequest");
-const sendApprovalEmail = require("../utils/emailService");
+const { sendApprovalEmail, sendEventAccessEmail } = require("../utils/emailService");
 
 // Note: manual token creation route removed to enforce single automatic approval flow.
 
@@ -204,9 +204,56 @@ const rejectSociety = async (req, res) => {
   }
 };
 
+// Export handlers (placed after all declarations)
+
+// Open link handler: verifies token and redirects to frontend registration page
+const openApprovalLink = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const approvalToken = await ApprovalToken.findOne({ token });
+
+    if (!approvalToken) {
+      return res.status(404).send("Invalid token");
+    }
+
+    if (approvalToken.isUsed) {
+      return res.status(400).send("Token already used");
+    }
+
+    if (approvalToken.expiresAt < new Date()) {
+      return res.status(400).send("Token expired");
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const redirectUrl = `${frontendUrl}/society-register/${token}`;
+
+    // Redirect user to frontend registration page with token
+    return res.redirect(302, redirectUrl);
+  } catch (error) {
+    console.error("OPEN APPROVAL LINK ERROR:", error);
+    return res.status(500).send("Failed to open approval link");
+  }
+};
+
+
+const sendEventLink = async (req, res) => {
+  try {
+    // your logic here
+    res.status(200).json({ message: "Event link sent successfully" });
+  } catch (error) {
+    console.error("Error sending event link:", error);
+    res.status(500).json({ message: "Failed to send event link" });
+  }
+};
+
+
 module.exports = {
   verifyApprovalToken,
   useApprovalToken,
   approveSociety,
-  rejectSociety
+  rejectSociety,
+  openApprovalLink,
+  sendEventLink
 };
+
