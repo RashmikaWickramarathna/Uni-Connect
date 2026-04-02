@@ -1,6 +1,14 @@
 import apiClient from "./apiClient";
 
 export const submitSocietyRequest = async (payload) => {
+  // If a FormData is passed (file upload), send as multipart/form-data
+  if (payload instanceof FormData || (payload && typeof payload.get === "function")) {
+    const res = await apiClient.post("/society-requests/submit", payload, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data;
+  }
+
   const res = await apiClient.post("/society-requests/submit", payload);
   return res.data;
 };
@@ -35,6 +43,22 @@ export const registerApprovedSociety = async (payload) => {
   return res.data;
 };
 
+export const verifyEventToken = async (token) => {
+  const res = await apiClient.get(`/events/verify-event-token/${token}`);
+  return res.data;
+};
+
+export const createEvent = async (token, eventData) => {
+  const res = await apiClient.post(`/events/${token}`, eventData);
+  return res.data;
+};
+
+export const sendEventLink = async (id, adminName) => {
+  const res = await apiClient.post(`/society-approval/send-event-link/${id}`, { adminName });
+  return res.data;
+};
+
 export const approveSociety = (id) => {
   return apiClient.post(`/societies/approve/${id}`);
 };
+
