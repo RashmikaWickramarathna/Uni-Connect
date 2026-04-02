@@ -3,12 +3,18 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const path = require("path");
 
 const societyReqRoutes = require("./routes/societyReqRoutes");
 const societyApprovalRoutes = require("./routes/societyApprovalRoutes");
 const { verifyTransporter, sendApprovalEmail } = require("./utils/emailService");
 
 // Check required environment variables
+// Allow either EMAIL_PASS or EMAIL_PASSWORD in .env (backwards compatibility)
+if (!process.env.EMAIL_PASS && process.env.EMAIL_PASSWORD) {
+  process.env.EMAIL_PASS = process.env.EMAIL_PASSWORD;
+}
+
 const requiredEnvVars = ["MONGO_URI", "EMAIL_USER", "EMAIL_PASS"];
 const missingVars = requiredEnvVars.filter((key) => !process.env[key]);
 
@@ -33,6 +39,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files statically at /uploads
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Routes
 app.use("/api/society-requests", societyReqRoutes);

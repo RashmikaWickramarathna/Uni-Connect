@@ -1,16 +1,17 @@
 const express = require("express");
 const router = express.Router();
-const { createSocietyRequest, getAllSocietyRequests,getSocietyRequestById, approveSocietyRequest, rejectSocietyRequest,registerApprovedSociety } = require("../controllers/societyReqController");
+const upload = require("../middleware/upload");
 
-router.post("/submit", createSocietyRequest);
-//Get all
+const {
+  createSocietyRequest,
+  getAllSocietyRequests,
+  getSocietyRequestById,
+  registerApprovedSociety,
+} = require("../controllers/societyReqController");
+
+router.post("/submit", upload.single("signatureLetter"), createSocietyRequest);
 router.get("/", getAllSocietyRequests);
-
-//Get by ID
 router.get("/:id", getSocietyRequestById);
-
-// Approval and rejection are handled by the dedicated approval routes
-
 router.post("/register-approved", registerApprovedSociety);
 
 module.exports = router;

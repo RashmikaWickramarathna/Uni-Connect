@@ -29,6 +29,12 @@ const societyRequestSchema = new mongoose.Schema(
     officialEmail: { type: String, required: true, unique: true },
     contactNumber: { type: String, required: true },
 
+    signatureLetter: {
+      filePath: { type: String },
+      originalName: { type: String },
+      mimeType: { type: String }
+    },
+
     advisor: { type: advisorSchema, required: true },
 
     president: { type: memberSchema, required: true },
@@ -47,9 +53,24 @@ const societyRequestSchema = new mongoose.Schema(
     },
 
     rejectionReason: { type: String, default: "" },
-    adminComment: { type: String, default: "" }
+    adminComment: { type: String, default: "" },
+    eventAccessToken: {
+      type: String,
+      unique: true
+    },
+    eventAccessLink: String,
+    eventAccessExpiresAt: Date,
+    eventAccessSentBy: String,
+    eventAccessSentAt: Date,
+    approvalToken: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
+    approvalLink: String
   },
   { timestamps: true }
+
 );
 
 module.exports = mongoose.model("SocietyRequest", societyRequestSchema);

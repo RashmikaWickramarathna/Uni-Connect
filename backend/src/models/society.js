@@ -23,9 +23,15 @@ const societySchema = new mongoose.Schema(
     status: {
       type: String,
       default: "Active"
-    }
+    },
+    eventAccessToken: {
+      type: String,
+      unique: true
+    },
+    eventAccessLink: String
   },
   { timestamps: true }
+
 );
 
 module.exports = mongoose.model("Society", societySchema);
