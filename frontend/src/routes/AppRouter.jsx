@@ -4,6 +4,7 @@ import SocietyRequestSubmit from "../pages/SocietyRequestSubmit";
 import SocietyRequestsAdmin from "../pages/SocietyRequestsAdmin";
 import SocietyRequestDetail from "../pages/SocietyRequestDetail";
 import SocietyRegisterByToken from "../pages/SocietyRegisterByToken";
+import CreateEvent from "../pages/CreateEvent";
 
 export default function AppRouter() {
   return (
@@ -15,7 +16,9 @@ export default function AppRouter() {
         <Route path="/admin" element={<Navigate to="/admin/requests" replace />} />
         <Route path="/admin/requests/:id" element={<SocietyRequestDetail />} />
         <Route path="/society-register/:token" element={<SocietyRegisterByToken />} />
+        <Route path="/create-event/:token" element={<CreateEvent />} />
       </Routes>
+
     </BrowserRouter>
   );
 }

@@ -4,13 +4,14 @@ import Layout from "../components/Layout";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ToastMessage from "../components/ToastMessage";
 import StatusBadge from "../components/StatusBadge";
-import { getSocietyRequestById } from "../api/societyApi";
+import { getSocietyRequestById, sendEventLink } from "../api/societyApi";
 
 export default function SocietyRequestDetail() {
   const { id } = useParams();
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ type: "info", message: "" });
+  const [sendingEventLink, setSendingEventLink] = useState(false);
 
   useEffect(() => {
     const loadRequest = async () => {
@@ -63,7 +64,31 @@ export default function SocietyRequestDetail() {
           <div className="card">
             <div className="row-between">
               <h2>{request.societyName}</h2>
-              <StatusBadge status={request.status} />
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {request.status === 'Approved' && (
+                  <button
+                    className="btn"
+                    onClick={async () => {
+                      const adminName = window.prompt('Enter your name (will be recorded as sender)', 'Admin');
+                      if (!adminName) return;
+                      try {
+                        setSendingEventLink(true);
+                        const res = await sendEventLink(id, adminName);
+                        setRequest((prev) => ({ ...prev, eventAccessLink: res.eventAccessLink, eventAccessSentBy: adminName, eventAccessSentAt: new Date().toISOString() }));
+                        setToast({ type: 'success', message: res.message || 'Event link sent' });
+                      } catch (err) {
+                        setToast({ type: 'error', message: err?.response?.data?.message || 'Failed to send event link' });
+                      } finally {
+                        setSendingEventLink(false);
+                      }
+                    }}
+                    disabled={sendingEventLink}
+                  >
+                    {sendingEventLink ? 'Sending…' : 'Send Approval Link'}
+                  </button>
+                )}
+                <StatusBadge status={request.status} />
+              </div>
             </div>
 
             <p><strong>Short Name:</strong> {request.shortName || "-"}</p>
@@ -82,6 +107,17 @@ export default function SocietyRequestDetail() {
           {renderMember("Treasurer", request.treasurer)}
 
           <div className="card">
+            <h3>Event Access</h3>
+            {request.eventAccessLink ? (
+              <div>
+                <p><strong>Link:</strong> <a href={request.eventAccessLink} target="_blank" rel="noreferrer">Open</a></p>
+                <p><strong>Sent By:</strong> {request.eventAccessSentBy || '-'}</p>
+                <p><strong>Sent At:</strong> {request.eventAccessSentAt ? new Date(request.eventAccessSentAt).toLocaleString() : '-'}</p>
+              </div>
+            ) : (
+              <p>No event access link has been sent.</p>
+            )}
+            <hr />
             <h3>Executive Members</h3>
             {request.executiveMembers?.length ? (
               request.executiveMembers.map((member, index) => (

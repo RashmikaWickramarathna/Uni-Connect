@@ -29,7 +29,7 @@ function SmallStatCard({ label, value, color, icon }) {
 }
 
 export default function AdminDashboard() {
-  const [module] = useState("Dashboard");
+  // no local module state needed; selectedModule comes from AdminLayout
 
   return (
     <AdminLayout>
