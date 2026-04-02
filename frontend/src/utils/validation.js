@@ -86,93 +86,203 @@ export const getStudentIdErrorMessage = (faculty) => {
 };
 
 // Validate entire form
-export const validateForm = (formData) => {
-  const errors = [];
+// Field-level validation helpers
+const getValueByPath = (obj, path) => {
+  if (!path) return undefined;
+  const parts = path.split('.');
+  return parts.reduce((acc, part) => {
+    if (acc === undefined || acc === null) return undefined;
+    // numeric index
+    if (/^\d+$/.test(part)) return acc[Number(part)];
+    return acc[part];
+  }, obj);
+};
 
-  // Validate contact number (10 digits)
-  if (!validatePhoneNumber(formData.contactNumber)) {
-    errors.push("Contact number must be exactly 10 digits");
-  }
+const fieldLabel = (path) => {
+  const parts = path.split('.');
+  const last = parts[parts.length - 1];
+  const root = parts[0];
+  const readableField = {
+    name: 'Name',
+    designation: 'Designation',
+    studentId: 'Student ID',
+    email: 'Email',
+    phone: 'Phone',
+    faculty: 'Faculty',
+    academicYear: 'Academic Year',
+    societyName: 'Society Name',
+    shortName: 'Short Name',
+    category: 'Category',
+    description: 'Description',
+    objectives: 'Objectives',
+    officialEmail: 'Official Email',
+    contactNumber: 'Contact Number',
+    accountHolderName: 'Account Holder Name',
+    accountNumber: 'Account Number',
+    bankName: 'Bank Name',
+    branchName: 'Branch Name',
+    letterFile: 'Signature Letter',
+    presidentSigned: 'Confirmation',
+  }[last] || last;
 
-  // Validate advisor
-  if (formData.advisor.name && !validateName(formData.advisor.name)) {
-    errors.push("Advisor name can only contain letters");
-  }
-  if (formData.advisor.designation && !validateDesignation(formData.advisor.designation)) {
-    errors.push("Advisor designation can only contain letters");
-  }
-
-  // Validate president
-  if (!validateName(formData.president.name)) {
-    errors.push("President name can only contain letters");
-  }
-  if (!validateDesignation(formData.president.designation)) {
-    errors.push("President designation can only contain letters");
-  }
-  if (!validateStudentId(formData.president.studentId, formData.president.faculty)) {
-    errors.push(`President's ${getStudentIdErrorMessage(formData.president.faculty)}`);
-  }
-  if (!validatePhoneNumber(formData.president.phone)) {
-    errors.push("President's phone number must be exactly 10 digits");
-  }
-
-  // Validate vice president
-  if (!validateName(formData.vicePresident.name)) {
-    errors.push("Vice President name can only contain letters");
-  }
-  if (!validateDesignation(formData.vicePresident.designation)) {
-    errors.push("Vice President designation can only contain letters");
-  }
-  if (!validateStudentId(formData.vicePresident.studentId, formData.vicePresident.faculty)) {
-    errors.push(`Vice President's ${getStudentIdErrorMessage(formData.vicePresident.faculty)}`);
-  }
-  if (!validatePhoneNumber(formData.vicePresident.phone)) {
-    errors.push("Vice President's phone number must be exactly 10 digits");
-  }
-
-  // Validate secretary
-  if (!validateName(formData.secretary.name)) {
-    errors.push("Secretary name can only contain letters");
-  }
-  if (!validateDesignation(formData.secretary.designation)) {
-    errors.push("Secretary designation can only contain letters");
-  }
-  if (!validateStudentId(formData.secretary.studentId, formData.secretary.faculty)) {
-    errors.push(`Secretary's ${getStudentIdErrorMessage(formData.secretary.faculty)}`);
-  }
-  if (!validatePhoneNumber(formData.secretary.phone)) {
-    errors.push("Secretary's phone number must be exactly 10 digits");
+  if (root === 'advisor') return `Advisor ${readableField}`;
+  if (root === 'president') return `President ${readableField}`;
+  if (root === 'vicePresident') return `Vice President ${readableField}`;
+  if (root === 'secretary') return `Secretary ${readableField}`;
+  if (root === 'treasurer') return `Treasurer ${readableField}`;
+  if (root === 'executiveMembers') {
+    const idx = parts[1];
+    const pos = isNaN(Number(idx)) ? '' : `Executive Member ${Number(idx) + 1} `;
+    return `${pos}${readableField}`.trim();
   }
 
-  // Validate treasurer
-  if (!validateName(formData.treasurer.name)) {
-    errors.push("Treasurer name can only contain letters");
-  }
-  if (!validateDesignation(formData.treasurer.designation)) {
-    errors.push("Treasurer designation can only contain letters");
-  }
-  if (!validateStudentId(formData.treasurer.studentId, formData.treasurer.faculty)) {
-    errors.push(`Treasurer's ${getStudentIdErrorMessage(formData.treasurer.faculty)}`);
-  }
-  if (!validatePhoneNumber(formData.treasurer.phone)) {
-    errors.push("Treasurer's phone number must be exactly 10 digits");
+  return readableField;
+};
+
+export const validateField = (formData, path) => {
+  const value = getValueByPath(formData, path);
+  const label = fieldLabel(path);
+
+  // Basic required checks for many fields
+  if (path === 'societyName') {
+    if (!value || !String(value).trim()) return `${label} is required`;
+    return null;
   }
 
-  // Validate executive members
-  formData.executiveMembers.forEach((member, index) => {
-    if (!validateName(member.name)) {
-      errors.push(`Executive Member ${index + 1} name can only contain letters`);
+  if (path === 'category') {
+    if (!value) return `${label} is required`;
+    return null;
+  }
+
+  if (path === 'faculty') {
+    if (!value) return `${label} is required`;
+    return null;
+  }
+
+  if (path === 'officialEmail') {
+    if (!value) return `${label} is required`;
+    // basic email check
+    const re = /^\S+@\S+\.\S+$/;
+    if (!re.test(value)) return `Please enter a valid ${label.toLowerCase()}`;
+    return null;
+  }
+
+  if (path === 'contactNumber') {
+    if (!value) return `${label} is required`;
+    if (!validatePhoneNumber(value)) return `${label} must be exactly 10 digits`;
+    return null;
+  }
+
+  // Bank account checks
+  if (path.startsWith('bankAccount')) {
+    if (!value || !String(value).trim()) return `${fieldLabel(path)} is required`;
+    return null;
+  }
+
+  // Advisor and other member name/designation/email/phone checks
+  if (path.endsWith('.name')) {
+    if (!value || !validateName(value)) return `${label} can only contain letters`;
+    return null;
+  }
+
+  if (path.endsWith('.designation')) {
+    if (!value || !validateDesignation(value)) return `${label} can only contain letters`;
+    return null;
+  }
+
+  if (path.endsWith('.email')) {
+    if (!value) return `${label} is required`;
+    const re = /^\S+@\S+\.\S+$/;
+    if (!re.test(value)) return `Please enter a valid ${label.toLowerCase()}`;
+    return null;
+  }
+
+  if (path.endsWith('.phone')) {
+    if (!value) return `${label} is required`;
+    if (!validatePhoneNumber(value)) return `${label} must be exactly 10 digits`;
+    return null;
+  }
+
+  if (path.endsWith('.studentId')) {
+    // need faculty to validate
+    const parts = path.split('.');
+    const prefix = parts.slice(0, -1).join('.');
+    const faculty = getValueByPath(formData, `${prefix}.faculty`);
+    if (!value) return `${label} is required`;
+    if (!validateStudentId(value, faculty)) return `${label} must start with ${faculty ? facultyCodes[faculty].join(' or ') : 'valid faculty code'}`;
+    return null;
+  }
+
+  // Executive members: array-level checks handled in validateAll
+
+  // Checkbox confirmation
+  if (path === 'signatureLetter.presidentSigned') {
+    if (!value) return `You must confirm the statement before submitting`;
+    return null;
+  }
+
+  // File upload validation (type)
+  if (path === 'signatureLetter.letterFile') {
+    if (!value) return null; // file optional in many cases
+    const allowed = ['application/pdf', 'image/png', 'image/jpeg'];
+    if (!value.type || (!allowed.includes(value.type) && !value.type.startsWith('image/'))) {
+      return `Only PDF and image files are allowed`;
     }
-    if (!validateDesignation(member.designation)) {
-      errors.push(`Executive Member ${index + 1} designation can only contain letters`);
-    }
-    if (!validateStudentId(member.studentId, member.faculty)) {
-      errors.push(`Executive Member ${index + 1}'s ${getStudentIdErrorMessage(member.faculty)}`);
-    }
-    if (!validatePhoneNumber(member.phone)) {
-      errors.push(`Executive Member ${index + 1}'s phone number must be exactly 10 digits`);
-    }
+    return null;
+  }
+
+  return null;
+};
+
+export const validateAll = (formData) => {
+  const errors = {};
+
+  // Basic fields
+  const basics = ['societyName','category','faculty','officialEmail','contactNumber','description'];
+  basics.forEach((k) => {
+    const msg = validateField(formData, k);
+    if (msg) errors[k] = msg;
   });
+
+  // Bank account
+  ['bankAccount.accountHolderName','bankAccount.accountNumber','bankAccount.bankName','bankAccount.branchName'].forEach((k) => {
+    const msg = validateField(formData, k);
+    if (msg) errors[k] = msg;
+  });
+
+  // Advisor
+  ['advisor.name','advisor.designation','advisor.email','advisor.phone','advisor.faculty'].forEach((k) => {
+    const msg = validateField(formData, k);
+    if (msg) errors[k] = msg;
+  });
+
+  // Core officers
+  ['president','vicePresident','secretary','treasurer'].forEach((role) => {
+    ['name','designation','studentId','email','phone','faculty','academicYear'].forEach((field) => {
+      const path = `${role}.${field}`;
+      const msg = validateField(formData, path);
+      if (msg) errors[path] = msg;
+    });
+  });
+
+  // Executive members
+  if (!Array.isArray(formData.executiveMembers) || formData.executiveMembers.length < 3) {
+    errors['executiveMembers'] = 'At least 3 executive members are required';
+  }
+  formData.executiveMembers.forEach((member, idx) => {
+    ['name','designation','studentId','email','phone','faculty','academicYear'].forEach((field) => {
+      const path = `executiveMembers.${idx}.${field}`;
+      const msg = validateField(formData, path);
+      if (msg) errors[path] = msg;
+    });
+  });
+
+  // Signature letter checks
+  const sigConfirmMsg = validateField(formData, 'signatureLetter.presidentSigned');
+  if (sigConfirmMsg) errors['signatureLetter.presidentSigned'] = sigConfirmMsg;
+
+  const fileMsg = validateField(formData, 'signatureLetter.letterFile');
+  if (fileMsg) errors['signatureLetter.letterFile'] = fileMsg;
 
   return errors;
 };
