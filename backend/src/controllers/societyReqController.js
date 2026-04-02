@@ -6,42 +6,63 @@ const Society = require("../models/society");
 
 const createSocietyRequest = async (req, res) => {
   try {
+    let body = req.body;
+
+    // If form-data with file upload is used
+    if (req.file) {
+      if (req.body && req.body.payload) {
+        try {
+          body = JSON.parse(req.body.payload);
+        } catch (err) {
+          return res.status(400).json({ message: "Invalid payload format" });
+        }
+      }
+
+      body.signatureLetter = {
+        filePath: req.file.path.replace(/\\/g, "/"),
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+      };
+    }
+
     const existingSociety = await SocietyRequest.findOne({
       $or: [
-        { societyName: req.body.societyName },
-        { officialEmail: req.body.officialEmail }
-      ]
+        { societyName: body.societyName },
+        { officialEmail: body.officialEmail },
+      ],
     });
 
     if (existingSociety) {
       return res.status(400).json({
-        message: "Society name or official email already exists"
+        message: "Society name or official email already exists",
       });
     }
 
-    const societyRequest = new SocietyRequest(req.body);
+    const societyRequest = new SocietyRequest(body);
     await societyRequest.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Society registration request submitted successfully",
-      data: societyRequest
+      data: societyRequest,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("CREATE SOCIETY REQUEST ERROR:", error);
+    return res.status(500).json({
       message: "Failed to submit society request",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
 const getAllSocietyRequests = async (req, res) => {
   try {
-    const requests = await SocietyRequest.find();
-    res.status(200).json(requests);
+    const requests = await SocietyRequest.find().sort({ createdAt: -1 });
+    return res.status(200).json(requests);
   } catch (error) {
-    res.status(500).json({
+    console.error("GET ALL SOCIETY REQUESTS ERROR:", error);
+    return res.status(500).json({
       message: "Failed to fetch society requests",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -52,26 +73,26 @@ const getSocietyRequestById = async (req, res) => {
 
     if (!request) {
       return res.status(404).json({
-        message: "Society request not found"
+        message: "Society request not found",
       });
     }
 
-    res.status(200).json(request);
+    return res.status(200).json(request);
   } catch (error) {
-    res.status(500).json({
+    console.error("GET SOCIETY REQUEST BY ID ERROR:", error);
+    return res.status(500).json({
       message: "Failed to fetch society request",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
+// Kept for compatibility, but approval should happen via societyApprovalRoutes
 const approveSocietyRequest = async (req, res) => {
-  // Deprecated: approval should be performed via /api/society-approval/approve/:id
   return res.status(405).json({
-    message: "Use /api/society-approval/approve/:id to approve societies (automatic flow)"
+    message: "Use /api/society-approval/approve/:id to approve societies",
   });
 };
-
 
 const rejectSocietyRequest = async (req, res) => {
   try {
@@ -79,23 +100,25 @@ const rejectSocietyRequest = async (req, res) => {
 
     if (!request) {
       return res.status(404).json({
-        message: "Society request not found"
+        message: "Society request not found",
       });
     }
 
     request.status = "Rejected";
-    request.rejectionReason = req.body && req.body.reason ? req.body.reason : "";
+    request.rejectionReason =
+      req.body && req.body.reason ? req.body.reason : "";
 
     await request.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Society request rejected successfully",
-      data: request
+      data: request,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("REJECT SOCIETY REQUEST ERROR:", error);
+    return res.status(500).json({
       message: "Failed to reject society request",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -106,7 +129,7 @@ const registerApprovedSociety = async (req, res) => {
 
     if (!token || !password) {
       return res.status(400).json({
-        message: "Token and password are required"
+        message: "Token and password are required",
       });
     }
 
@@ -114,19 +137,19 @@ const registerApprovedSociety = async (req, res) => {
 
     if (!approvalToken) {
       return res.status(404).json({
-        message: "Invalid approval token"
+        message: "Invalid approval token",
       });
     }
 
     if (approvalToken.isUsed) {
       return res.status(400).json({
-        message: "This approval link has already been used"
+        message: "This approval link has already been used",
       });
     }
 
     if (approvalToken.expiresAt < new Date()) {
       return res.status(400).json({
-        message: "Approval link has expired"
+        message: "Approval link has expired",
       });
     }
 
@@ -134,17 +157,17 @@ const registerApprovedSociety = async (req, res) => {
 
     if (!request) {
       return res.status(404).json({
-        message: "Society request not found"
+        message: "Society request not found",
       });
     }
 
     const existingSociety = await Society.findOne({
-      officialEmail: request.officialEmail
+      officialEmail: request.officialEmail,
     });
 
     if (existingSociety) {
       return res.status(400).json({
-        message: "Society account already exists"
+        message: "Society account already exists",
       });
     }
 
@@ -158,7 +181,9 @@ const registerApprovedSociety = async (req, res) => {
       faculty: request.faculty,
       description: request.description,
       contactNumber: request.contactNumber,
-      status: "Active"
+      status: "Active",
+      eventAccessToken: request.eventAccessToken || crypto.randomBytes(32).toString("hex"),
+      eventAccessLink: request.eventAccessLink || null,
     });
 
     await society.save();
@@ -169,14 +194,15 @@ const registerApprovedSociety = async (req, res) => {
     request.status = "Registered";
     await request.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Society account created successfully",
-      data: society
+      data: society,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("REGISTER APPROVED SOCIETY ERROR:", error);
+    return res.status(500).json({
       message: "Failed to register approved society",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -187,5 +213,5 @@ module.exports = {
   getSocietyRequestById,
   approveSocietyRequest,
   rejectSocietyRequest,
-  registerApprovedSociety
+  registerApprovedSociety,
 };
