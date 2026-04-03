@@ -32,3 +32,8 @@ export default function App() {
     </BrowserRouter>
   );
 }
+import AppRouter from "./routes/AppRouter";
+
+export default function App() {
+  return <AppRouter />;
+}
