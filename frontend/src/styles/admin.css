@@ -6,6 +6,9 @@
   --muted:#6b7280;
 }
 
+
+
+
 .admin-shell{display:flex;min-height:100vh;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial}
 .admin-sidebar{width:260px;background:var(--sidebar);color:#fff;padding:22px 16px;display:flex;flex-direction:column}
 .brand{display:flex;gap:12px;align-items:center;margin-bottom:18px}

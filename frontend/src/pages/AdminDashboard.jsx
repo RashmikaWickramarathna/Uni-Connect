@@ -1,5 +1,5 @@
 import AdminLayout from "../components/AdminLayout";
-import { useState } from "react";
+
 
 function StatCard({ icon, label, value }) {
   return (
@@ -29,8 +29,8 @@ function SmallStatCard({ label, value, color, icon }) {
 }
 
 export default function AdminDashboard() {
-  // no local module state needed; selectedModule comes from AdminLayout
-
+  
+  // local theme state is used here; selectedModule comes from AdminLayout
   return (
     <AdminLayout>
       {({ selectedModule }) => (
@@ -174,5 +174,5 @@ export default function AdminDashboard() {
       )}
     </AdminLayout>
   );
-}
+};
 

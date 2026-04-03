@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import "../styles/admin.css";
+import "../styles/theme.css";
 
 const MenuItem = ({ icon, label, active, onClick }) => (
   <button 
@@ -75,6 +76,7 @@ export default function AdminLayout({ children, title = "Uni-Connect - Admin Pan
           </div>
           <div className="topbar-right">
             <button className="icon-btn">🔔</button>
+           
             <div className="profile">
               <div className="avatar">A</div>
               <div className="profile-info">
