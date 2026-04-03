@@ -16,6 +16,7 @@ export const facultyOptions = [
   "Faculty of Engineering",
   "School of Architecture",
   "Faculty of Humanities & Sciences",
+  "None",
 ];
 
 export const academicYearOptions = [
@@ -27,6 +28,7 @@ export const academicYearOptions = [
 
 export const categoryOptions = [
   "Workshop",
+  "Society",
   "Seminar",
   "Competition",
   "Sports Event",
