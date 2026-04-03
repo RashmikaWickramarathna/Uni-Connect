@@ -45,9 +45,8 @@ function PaymentMethodStep({ totalAmount, ticketType, quantity, onConfirm, onBac
       return;
     }
     if (name === "expiryDate") {
-      const cleaned   = value.replace(/\D/g, "").slice(0, 4);
-      const formatted = cleaned.length > 2 ? `${cleaned.slice(0, 2)}/${cleaned.slice(2)}` : cleaned;
-      setOnlineDetails((prev) => ({ ...prev, expiryDate: formatted }));
+      // type="month" already formats YYYY-MM, no manual formatting needed
+      setOnlineDetails((prev) => ({ ...prev, [name]: value }));
       return;
     }
     if (name === "cvv") {
@@ -174,7 +173,14 @@ function PaymentMethodStep({ totalAmount, ticketType, quantity, onConfirm, onBac
             </div>
             <div className="form-group">
               <label>Expiry Date *</label>
-              <input name="expiryDate" value={onlineDetails.expiryDate} onChange={handleOnlineChange} placeholder="MM/YY" maxLength={5} inputMode="numeric" />
+              <input 
+                name="expiryDate" 
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                value={onlineDetails.expiryDate}
+                onChange={handleOnlineChange}
+                required 
+              />
             </div>
             <div className="form-group">
               <label>CVV *</label>
@@ -238,13 +244,32 @@ function BookingSuccess({ result }) {
       <p style={{ color: "#94a3b8", fontSize: "0.85rem" }}>
         A confirmation will be sent to your email. Please bring your ticket number to the event.
       </p>
-      <button
-        className="btn-next"
-        style={{ marginTop: "1.5rem" }}
-        onClick={() => window.location.href = "/my-tickets"}
-      >
-        View My Tickets →
-      </button>
+      <div style={{ marginTop: "2rem", padding: "1.5rem", background: "#f0fdf4", border: "2px solid #22c55e", borderRadius: "12px", textAlign: "left" }}>
+        <div style={{ fontSize: "1.2rem", marginBottom: "0.75rem", color: "#166534", fontWeight: "600" }}>
+          🎉 Next Steps:
+        </div>
+        <ol style={{ color: "#166534", paddingLeft: "1.5rem", margin: 0 }}>
+          <li>Go to <strong>Home → My Tickets</strong></li>
+          <li>Enter your <strong>Student ID</strong> and <strong>Email</strong></li>
+          <li>View your ticket with QR code ✓</li>
+        </ol>
+      </div>
+      <div style={{ display: "flex", gap: "1rem", justifyContent: "center", marginTop: "1.5rem" }}>
+        <button
+          className="btn-next"
+          style={{ background: "#3b82f6", flex: 1 }}
+          onClick={() => window.location.href = "/"}
+        >
+          🏠 Home
+        </button>
+        <button
+          className="btn-next"
+          style={{ flex: 1 }}
+          onClick={() => window.location.href = "/my-tickets"}
+        >
+          🎫 My Tickets
+        </button>
+      </div>
     </div>
   );
 }
@@ -301,8 +326,16 @@ export default function TicketBookingPage() {
 
   const validateStep0 = () => {
     if (!form.studentName.trim()) return "Full name is required.";
-    if (!form.studentId.trim())   return "Student ID is required.";
+    const cleanStudentId = form.studentId.trim();
+    if (!cleanStudentId) return "Student ID is required.";
+    if (!/^it[0-9]{8}$/i.test(cleanStudentId)) return 'Student ID must be "it" + exactly 8 digits (it23711228)';
     if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) return "Valid email is required.";
+    
+    // Phone validation (if provided)
+    const cleanPhone = form.phone.trim();
+    if (cleanPhone && !/^07[0-9]{8}$/.test(cleanPhone)) {
+      return 'Phone must be 10 digits starting with "07" (e.g. 0712345678)';
+    }
     return "";
   };
 
@@ -464,23 +497,73 @@ export default function TicketBookingPage() {
               <div className="form-grid">
                 <div className="form-group full">
                   <label>Full Name *</label>
-                  <input name="studentName" value={form.studentName} onChange={handleChange} placeholder="e.g. Kavindu Perera" />
+                  <input 
+                    required 
+                    minLength="2" 
+                    maxLength="100"
+                    name="studentName" 
+                    value={form.studentName} 
+                    onChange={handleChange}
+                    placeholder="e.g. Kavindu Perera" 
+                  />
                 </div>
                 <div className="form-group">
                   <label>Student ID *</label>
-                  <input name="studentId" value={form.studentId} onChange={handleChange} placeholder="e.g. SC/2021/001" />
+                  <input 
+                    required 
+                    minLength="3" 
+                    maxLength="20"
+                    pattern="[a-zA-Z]+\/[0-9]+"
+                    title="Format: FACULTY/NUMBER (e.g. ITxxxxxxxx)"
+                    name="studentId" 
+                    value={form.studentId} 
+                    onChange={handleChange}
+placeholder="itxxxxxxxx" 
+
+                  />
                 </div>
                 <div className="form-group">
                   <label>Email *</label>
-                  <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="you@uni.ac.lk" />
+                  <input 
+                    required 
+                    type="email" 
+                    pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+                    name="email" 
+                    value={form.email} 
+                    onChange={handleChange}
+                    placeholder="you@uni.ac.lk" 
+                  />
                 </div>
                 <div className="form-group">
-                  <label>Phone</label>
-                  <input name="phone" value={form.phone} onChange={handleChange} placeholder="07X XXX XXXX" />
+                  <label>Phone (Optional)</label>
+                  <input 
+                    pattern="07[0-9]{8}"
+                    inputMode="tel"
+                    maxLength="10"
+                    name="phone" 
+                    value={form.phone} 
+                    onChange={handleChange}
+                    placeholder="07XXXXXXXX" 
+                  />
                 </div>
                 <div className="form-group">
-                  <label>Faculty</label>
-                  <input name="faculty" value={form.faculty} onChange={handleChange} placeholder="e.g. Faculty of Science" />
+                  <label>Faculty (Optional)</label>
+                  <input 
+                    list="faculty-list"
+                    maxLength="50"
+                    name="faculty" 
+                    value={form.faculty} 
+                    onChange={handleChange}
+                    placeholder="e.g. Faculty of Science" 
+                  />
+                  <datalist id="faculty-list">
+                    <option>Faculty of Computing</option>
+                    <option>Faculty of architecture</option>
+                    <option>Faculty of Business</option>
+                    <option>Faculty of Humanity</option>
+                    <option>Management</option>
+                    <option>Other</option>
+                  </datalist>
                 </div>
               </div>
               <button className="btn-next" onClick={handleNextFromDetails}>

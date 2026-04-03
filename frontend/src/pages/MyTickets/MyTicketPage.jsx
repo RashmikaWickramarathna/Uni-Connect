@@ -1,12 +1,11 @@
 // src/pages/MyTickets/MyTicketsPage.jsx
-// UniConnect – Student My Tickets Page
+
 
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
+import TicketDownload from './TicketDownload.jsx';
 import "./MyTicketPage.css";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const STATUS_STYLES = {
   confirmed: { bg: "#dcfce7", color: "#16a34a", label: "Confirmed", icon: "✅" },
@@ -41,24 +40,31 @@ function TicketQR({ ticketNumber }) {
 
 export default function MyTicketsPage() {
   const navigate = useNavigate();
-  const [studentId, setStudentId] = useState(localStorage.getItem("studentId") || "");
-  const [inputId, setInputId]     = useState(localStorage.getItem("studentId") || "");
+  const [studentId, setStudentId] = useState("");
+  const [email, setEmail] = useState("");
+  const [inputStudentId, setInputStudentId]     = useState("");
+  const [inputEmail, setInputEmail] = useState("");
   const [tickets, setTickets]     = useState([]);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState("");
   const [filter, setFilter]       = useState("all");
-  const [expanded, setExpanded]   = useState(null);
+  const [expanded, setExpanded]     = useState(null);
+  const [showDownloadModal, setShowDownloadModal] = useState(null);
+  const [credentials, setCredentials] = useState(false);
 
-  const fetchTickets = (sid) => {
-    if (!sid.trim()) return;
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+  const fetchTickets = (sid, em) => {
+    if (!sid.trim() || !em.trim()) return;
     setLoading(true);
     setError("");
-    fetch(`${API_BASE}/tickets/student/${sid.trim()}`)
+    const encodedEmail = encodeURIComponent(em.trim());
+    fetch(`${API_BASE}/tickets/verify/${sid.trim()}/${encodedEmail}`)
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data)) {
           setTickets(data);
-          if (data.length === 0) setError("No tickets found for this Student ID.");
+          if (data.length === 0) setError("No tickets found for these credentials.");
         } else {
           setError(data.message || "Failed to load tickets.");
         }
@@ -68,13 +74,20 @@ export default function MyTicketsPage() {
   };
 
   useEffect(() => {
-    if (studentId) fetchTickets(studentId);
-  }, [studentId]);
+    if (credentials && studentId && email) {
+      fetchTickets(studentId, email);
+    }
+  }, [credentials]);
 
-  const handleSearch = () => {
-    if (!inputId.trim()) return;
-    localStorage.setItem("studentId", inputId.trim());
-    setStudentId(inputId.trim());
+  const handleVerify = () => {
+    if (!inputStudentId.trim() || !inputEmail.trim()) {
+      setError("Student ID and Email both required");
+      return;
+    }
+    setStudentId(inputStudentId.trim());
+    setEmail(inputEmail.trim().toLowerCase());
+    setCredentials(true);
+    setError("");
   };
 
   const filtered = filter === "all"
@@ -102,18 +115,30 @@ export default function MyTicketsPage() {
 
       {/* ── Student ID lookup ── */}
       <div className="mt-lookup">
-        <div className="lookup-box">
-          <span className="lookup-icon">🎓</span>
-          <input
-            className="lookup-input"
-            type="text"
-            placeholder="Enter your Student ID  e.g. SC/2021/001"
-            value={inputId}
-            onChange={(e) => setInputId(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          />
-          <button className="lookup-btn" onClick={handleSearch}>
-            Search
+        <div className="lookup-box" style={{ flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', width: '100%' }}>
+            <span className="lookup-icon">🎓</span>
+            <input
+              className="lookup-input"
+              type="text"
+              placeholder="Student ID (e.g. it23711228)"
+              value={inputStudentId}
+              onChange={(e) => setInputStudentId(e.target.value)}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', width: '100%' }}>
+            <span className="lookup-icon" style={{ background: 'none' }}>📧</span>
+            <input
+              className="lookup-input"
+              type="email"
+              placeholder="Email (e.g. you@student.ac.lk)"
+              value={inputEmail}
+              onChange={(e) => setInputEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleVerify()}
+            />
+          </div>
+          <button className="lookup-btn" onClick={handleVerify} style={{ alignSelf: 'stretch' }}>
+            Verify & View Tickets
           </button>
         </div>
       </div>
@@ -189,12 +214,23 @@ export default function MyTicketsPage() {
                           {statusStyle.icon} {statusStyle.label}
                         </span>
                       </div>
-                      <button
-                        className="mt-expand-btn"
-                        onClick={() => setExpanded(isExpanded ? null : ticket._id)}
-                      >
-                        {isExpanded ? "▲ Less" : "▼ More"}
-                      </button>
+                      <div className="mt-card-actions">
+                        <button
+                          className="mt-download-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDownloadModal(ticket._id);
+                          }}
+                        >
+                          📥 Download Ticket
+                        </button>
+                        <button
+                          className="mt-expand-btn"
+                          onClick={() => setExpanded(isExpanded ? null : ticket._id)}
+                        >
+                          {isExpanded ? "▲ Less" : "▼ More"}
+                        </button>
+                      </div>
                     </div>
 
                     <div className="mt-meta-grid">
@@ -246,6 +282,12 @@ export default function MyTicketsPage() {
                     </div>
 
                     {/* Expanded section */}
+                    {showDownloadModal && (
+                      <TicketDownload 
+                        ticket={tickets.find(t => t._id === showDownloadModal)} 
+                        onClose={() => setShowDownloadModal(null)} 
+                      />
+                    )}
                     {isExpanded && (
                       <div className="mt-expanded-section">
                         <div className="mt-expanded-grid">
@@ -301,11 +343,11 @@ export default function MyTicketsPage() {
         </div>
       )}
 
-      {!studentId && !loading && (
+      {!credentials && !loading && (
         <div className="mt-empty">
-          <div className="mt-empty-icon">🎓</div>
-          <h3>Enter your Student ID</h3>
-          <p>Type your student ID above to view your tickets.</p>
+          <div className="mt-empty-icon">🔐</div>
+          <h3>Verify Your Identity</h3>
+          <p>Enter your Student ID and Email used during booking to view your tickets securely.</p>
         </div>
       )}
     </div>

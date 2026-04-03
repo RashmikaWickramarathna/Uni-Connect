@@ -89,7 +89,6 @@ export default function EventsListPage() {
       <div className="el-header">
         <div className="el-header-text">
           <h1 className="el-title">Upcoming Events</h1>
-          <p className="el-sub">Discover and book tickets for university events</p>
         </div>
         <div className="el-count-badge">
           {filtered.length} event{filtered.length !== 1 ? "s" : ""}

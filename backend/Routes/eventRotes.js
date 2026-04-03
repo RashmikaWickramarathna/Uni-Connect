@@ -14,6 +14,12 @@ const {
   getEventStats,
 } = require("../controllers/eventController");
 
+const {
+  validateCreateEvent,
+  validateUpdateEvent,
+  validateObjectId,
+} = require("../src/middleware/validationMiddleware");
+
 // NOTE: specific paths must come before /:id
 
 // GET  /api/events/stats
@@ -29,18 +35,18 @@ router.get("/featured", getFeaturedEvents);
 router.get("/", getAllEvents);
 
 // POST /api/events
-router.post("/", createEvent);
+router.post("/", validateCreateEvent, createEvent);
 
 // GET  /api/events/:id
-router.get("/:id", getEventById);
+router.get("/:id", validateObjectId, getEventById);
 
 // PUT  /api/events/:id
-router.put("/:id", updateEvent);
+router.put("/:id", validateObjectId, validateUpdateEvent, updateEvent);
 
 // DELETE /api/events/:id
-router.delete("/:id", deleteEvent);
+router.delete("/:id", validateObjectId, deleteEvent);
 
 // PATCH /api/events/:id/publish
-router.patch("/:id/publish", togglePublish);
+router.patch("/:id/publish", validateObjectId, togglePublish);
 
 module.exports = router;

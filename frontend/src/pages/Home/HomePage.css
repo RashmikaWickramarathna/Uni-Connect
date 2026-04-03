@@ -1,6 +1,6 @@
 /* src/pages/Home/HomePage.css */
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap');
+/* src/pages/Home/HomePage.css */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -8,7 +8,7 @@
   min-height: 100vh;
   background: #07080f;
   color: #f0f2ff;
-  font-family: 'Manrope', sans-serif;
+  font-family: Arial, sans-serif;
   overflow-x: hidden;
 }
 
@@ -114,7 +114,7 @@
   background: rgba(99, 102, 241, 0.15);
   border: 1px solid rgba(99, 102, 241, 0.4);
   color: #a5b4fc;
-  font-family: 'Manrope', sans-serif;
+  font-family: Arial, sans-serif;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -142,7 +142,7 @@
 }
 
 .hero-sub {
-  font-family: 'Manrope', sans-serif;
+  font-family: Arial, sans-serif;
   font-size: 1.05rem;
   font-weight: 400;
   color: #94a3b8;
@@ -155,7 +155,7 @@
 .hero-btn {
   padding: 0.9rem 2rem;
   border-radius: 12px;
-  font-family: 'Manrope', sans-serif;
+  font-family: Arial, sans-serif;
   font-size: 0.9rem;
   font-weight: 600;
   letter-spacing: 0.025em;
@@ -204,7 +204,7 @@
 }
 
 .portals-sub {
-  font-family: 'Manrope', sans-serif;
+  font-family: Arial, sans-serif;
   color: #64748b;
   font-size: 0.95rem;
   font-weight: 400;

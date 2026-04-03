@@ -212,6 +212,8 @@ const bookTicket = async (req, res) => {
 
     await ticket.save();
 
+    // Email feature removed per user request
+
     // Increment event's booked seat counter
     await Event.findByIdAndUpdate(eventId, {
       $inc: { bookedSeats: quantity },
@@ -395,6 +397,36 @@ const getTicketStats = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────
+// 🔐 Verify Student Tickets by ID + Email (Secure)
+// GET /api/tickets/verify/:studentId/:email
+// ─────────────────────────────────────────────
+const verifyStudentTicket = async (req, res) => {
+  try {
+    const { studentId, email } = req.params;
+    
+    if (!studentId || !email) {
+      return res.status(400).json({ message: "Student ID and email required" });
+    }
+
+    const tickets = await Ticket.find({ 
+      studentId: studentId.trim(), 
+      email: email.trim().toLowerCase() 
+    })
+      .sort({ bookedAt: -1 })
+      .populate("eventId", "title date venue bannerImage status");
+
+    if (tickets.length === 0) {
+      return res.json([]);
+    }
+
+    res.json(tickets);
+  } catch (err) {
+    console.error("❌ Verify Student Tickets Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   createTicketPaymentIntent,
   bookTicket,
@@ -404,4 +436,5 @@ module.exports = {
   cancelTicket,
   checkInTicket,
   getTicketStats,
+  verifyStudentTicket,
 };

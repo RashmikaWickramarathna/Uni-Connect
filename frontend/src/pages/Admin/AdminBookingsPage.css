@@ -1,12 +1,12 @@
 /* src/pages/Admin/AdminBookingsPage.css */
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap');
+/* src/pages/Admin/AdminBookingsPage.css */
 
 .ab-page {
   max-width: 1300px;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: Arial, sans-serif;
   color: #1e293b;
 }
 
@@ -27,7 +27,7 @@
   border: none;
   border-radius: 8px;
   padding: 0.5rem 1rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.84rem;
   font-weight: 500;
   color: #475569;
@@ -48,7 +48,7 @@
 }
 
 .ab-sub {
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   color: #64748b;
   font-size: 0.9rem;
   font-weight: 400;
@@ -61,7 +61,7 @@
   border-radius: 10px;
   padding: 0.55rem 1.1rem;
   font-size: 0.84rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-weight: 600;
   color: #475569;
   cursor: pointer;
@@ -77,7 +77,7 @@
   color: #16a34a;
   border-radius: 10px;
   padding: 0.85rem 1.25rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-weight: 600;
   font-size: 0.88rem;
   margin-bottom: 1rem;
@@ -122,7 +122,7 @@
 }
 
 .ab-stat-label {
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.03em;
@@ -139,7 +139,7 @@
   border-radius: 12px;
   padding: 0.9rem 1.25rem;
   margin-bottom: 1.5rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.86rem;
   font-weight: 500;
   color: #1d4ed8;
@@ -176,7 +176,7 @@
   flex: 1;
   border: none;
   outline: none;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.88rem;
   font-weight: 400;
   color: #1e293b;
@@ -190,7 +190,7 @@
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
   padding: 0.5rem 0.85rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.86rem;
   font-weight: 500;
   color: #334155;
@@ -217,7 +217,7 @@
   color: #dc2626;
   border-radius: 10px;
   padding: 0.85rem 1.25rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.88rem;
   margin-bottom: 1rem;
 }
@@ -228,7 +228,7 @@
   align-items: center;
   gap: 1rem;
   padding: 3rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   color: #64748b;
 }
 
@@ -245,7 +245,7 @@
 .ab-empty {
   text-align: center;
   padding: 3rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   color: #64748b;
 }
 
@@ -268,7 +268,7 @@
 .ab-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.86rem;
   background: #fff;
 }
@@ -281,7 +281,7 @@
 .ab-table th {
   padding: 0.85rem 1rem;
   text-align: left;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -304,7 +304,7 @@
 .row-highlight:hover { background: #fef3c7 !important; }
 
 .ab-ticket-num {
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-weight: 700;
   font-size: 0.79rem;
   color: #4361ee;
@@ -312,13 +312,13 @@
 }
 
 .ab-student-name {
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-weight: 600;
   color: #1e293b;
 }
 
 .ab-student-id {
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.76rem;
   font-weight: 400;
   color: #94a3b8;
@@ -330,18 +330,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-weight: 500;
   color: #334155;
 }
 
 .ab-date {
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   color: #475569;
 }
 
 .ab-time {
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.76rem;
   font-weight: 400;
   color: #94a3b8;
@@ -349,27 +349,27 @@
 }
 
 .ab-type {
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-weight: 500;
   text-transform: capitalize;
   color: #334155;
 }
 
 .ab-qty {
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.76rem;
   color: #94a3b8;
 }
 
 .ab-amount {
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-weight: 700;
   color: #1e293b;
 }
 
 .ab-method-badge, .ab-status-badge {
   display: inline-block;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -386,7 +386,7 @@
   border: none;
   border-radius: 8px;
   padding: 0.4rem 0.85rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -404,7 +404,7 @@
   border: none;
   border-radius: 8px;
   padding: 0.4rem 0.85rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -417,7 +417,7 @@
 .ab-reject-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .ab-no-action {
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.79rem;
   color: #94a3b8;
 }
@@ -454,7 +454,7 @@
 }
 
 .ab-modal-sub {
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.88rem;
   font-weight: 400;
   color: #64748b;
@@ -464,7 +464,7 @@
 
 .ab-modal-label {
   display: block;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -477,7 +477,7 @@
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
   padding: 0.75rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-size: 0.88rem;
   font-weight: 400;
   color: #1e293b;
@@ -496,7 +496,7 @@
   border: none;
   border-radius: 10px;
   padding: 0.65rem 1.25rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-weight: 600;
   font-size: 0.86rem;
   color: #475569;
@@ -511,7 +511,7 @@
   border: none;
   border-radius: 10px;
   padding: 0.65rem 1.25rem;
-  font-family: 'Manrope', sans-serif;
+  font-family: arial, sans-serif;
   font-weight: 600;
   font-size: 0.86rem;
   color: #fff;

@@ -20,12 +20,14 @@ app.use(generalLimiter); // global rate limit
 const ticketRoutes = require("../Routes/ticketBookingRoutes");
 const paymentRoutes = require("../Routes/PaymentRoute");
 const adminRoutes  = require("../Routes/adminRoutes");
-const eventRoutes  = require("../Routes/eventRotes");
+const eventRoutes    = require("../Routes/eventRotes");
+const facultyRoutes   = require("../Routes/facultyRoutes");
 
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/faculties", facultyRoutes);
 
 // ── Health Check ──────────────────────────────
 app.get("/", (req, res) => {
