@@ -160,7 +160,6 @@ const bookTicket = async (req, res) => {
       });
     }
 
-    // Re-check availability
     const ticketConfig = event.tickets?.find((t) => t.type === ticketType);
     if (!ticketConfig) {
       return res.status(400).json({ message: `Ticket type "${ticketType}" not found` });
