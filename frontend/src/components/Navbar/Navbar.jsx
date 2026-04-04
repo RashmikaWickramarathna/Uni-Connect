@@ -78,7 +78,13 @@ const Navbar = () => {
             </Link>
           </li>
           <li className="auth-buttons">
-            <button className="btn-login">Log In</button>
+            <div className="auth-dropdown">
+              <button className="btn-login" aria-haspopup="true" aria-expanded="false">Log In</button>
+              <div className="dropdown-menu" role="menu">
+                <button className="btn-auth-option btn-society-login" role="menuitem">Society Login</button>
+                <button className="btn-auth-option btn-user-login" role="menuitem">User Login</button>
+              </div>
+            </div>
             <button className="btn-logout">Log Out</button>
           </li>
         </ul>

@@ -168,6 +168,80 @@
   box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
 }
 
+/* Auth Dropdown (Login submenu) */
+.auth-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.auth-dropdown .dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: none;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: white;
+  padding: 0.5rem;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(2, 6, 23, 0.06);
+  min-width: 160px;
+  z-index: 1002;
+}
+.auth-dropdown:hover .dropdown-menu,
+.auth-dropdown:focus-within .dropdown-menu {
+  display: flex;
+}
+.btn-auth-option {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95rem;
+  text-align: left;
+}
+.btn-auth-option:hover {
+  transform: translateY(-1px);
+}
+.btn-society-login {
+  background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+  color: white;
+}
+.btn-user-login {
+  border: 1px solid #0d6efd;
+  color: #0d6efd;
+  background: transparent;
+}
+
+@media (max-width: 768px) {
+  .auth-dropdown .dropdown-menu {
+    position: relative;
+    top: auto;
+    right: auto;
+    box-shadow: none;
+    display: flex;
+    width: 100%;
+    padding: 0;
+    gap: 0.5rem;
+    background: transparent;
+  }
+  .btn-auth-option {
+    width: 100%;
+    border-radius: 25px;
+    padding: 0.5rem 1rem;
+    background: transparent;
+  }
+  .btn-society-login {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    color: white;
+  }
+  .btn-user-login {
+    border: 2px solid #0d6efd;
+    color: #0d6efd;
+  }
+}
+
 /* Mobile Menu Toggle */
 .mobile-menu-toggle {
   display: none;
