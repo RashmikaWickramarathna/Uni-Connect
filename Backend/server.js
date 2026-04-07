@@ -1,39 +1,56 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const cors = require("cors");
-const bodyParser = require("body-parser");
 const path = require("path");
 require("dotenv").config();
 
-const menuRoutes = require("./Routes/menuRoutes");
-const inquiryRoutes = require("./Routes/inquiryRoutes"); // ✅ Import inquiry routes
-const userRoutes = require("./Routes/UserRoutes"); // ✅ Import user routes
-const feedbackRoutes = require("./Routes/feedbackRoutes"); // ✅ Import feedback routes
+const connectDB = require("./db");
+const authRoutes = require("./Routes/authRoutes");
+const adminRoutes = require("./Routes/adminRoutes");
+const inquiryRoutes = require("./Routes/inquiryRoutes");
+const feedbackRoutes = require("./Routes/feedbackRoutes");
+const userRoutes = require("./Routes/UserRoutes");
+const adminUserRoutes = require("./Routes/admin_User_Routes");
 
 const app = express();
-const PORT = 5001;
+const PORT = Number(process.env.PORT) || 5001;
 
-// Middleware
 app.use(cors());
-app.use(bodyParser.json());
-
-// Serve uploaded images
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Routes
-app.use("/api/menu", menuRoutes);
-app.use("/api/inquiries", inquiryRoutes); // ✅ Inquiry API
-app.use("/api/users", userRoutes); // ✅ User API
-app.use("/api/feedback", feedbackRoutes); // ✅ Feedback API
+app.get("/api/health", (_req, res) => {
+  res.json({ success: true, message: "Uni-Connect backend is running" });
+});
 
-// MongoDB Atlas connection
-mongoose
-  .connect(
-    "mongodb+srv://it23794184_db_user:XdNioWm96obPPHsJ@cluster0.snvxyk1.mongodb.net/myDatabase?retryWrites=true&w=majority",
-    { useNewUrlParser: true, useUnifiedTopology: true }
-  )
-  .then(() => {
-    console.log("✅ DB Connected");
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-  })
-  .catch((err) => console.log("❌ DB connection error:", err));
+app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/inquiries", inquiryRoutes);
+app.use("/api/feedback", feedbackRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/admin-users", adminUserRoutes);
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+  });
+});
+
+const startServer = async () => {
+  try {
+    await connectDB();
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error.message);
+    process.exit(1);
+  }
+};
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = app;

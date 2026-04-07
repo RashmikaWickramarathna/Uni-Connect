@@ -1,19 +1,30 @@
+const loadModel = (path) => {
+  try {
+    return require(path);
+  } catch (error) {
+    if (error.code === "MODULE_NOT_FOUND") {
+      return null;
+    }
+    throw error;
+  }
+};
+
 const models = {
-  users: require("../Model/UserModel"),
-  TableReservation: require("../Model/TableReservationModel"),
-  OrderManagement: require("../Model/OrderManagementModel"),
-  MenuManagement: require("../Model/MenuManagementModel"),
-  InventoryManagement: require("../Model/InventoryManagementModel"),
-  InquiryManagement: require("../Model/InquiryManagementModel"),
-  FeedbackManagement: require("../Model/FeedbackManagementModel"),
-  DeliveryManagement: require("../Model/DeliveryManagementModel"),
+  users: loadModel("../Model/UserModel"),
+  TableReservation: loadModel("../Model/TableReservationModel"),
+  OrderManagement: loadModel("../Model/OrderManagementModel"),
+  MenuManagement: loadModel("../Model/MenuManagementModel"),
+  InventoryManagement: loadModel("../Model/InventoryManagementModel"),
+  InquiryManagement: loadModel("../Model/InquiryManagementModel"),
+  FeedbackManagement: loadModel("../Model/FeedbackManagementModel"),
+  DeliveryManagement: loadModel("../Model/DeliveryManagementModel"),
 };
 
 // Fetch all users/managers
 exports.getUsers = (collectionName) => async (req, res) => {
   try {
     const Model = models[collectionName];
-    if (!Model) return res.status(400).json({ message: "Invalid collection" });
+    if (!Model) return res.status(404).json({ message: "Collection is not available in this project" });
 
     const users = await Model.find().select("-__v");
     res.status(200).json({ users });
@@ -27,7 +38,7 @@ exports.getUsers = (collectionName) => async (req, res) => {
 exports.addUser = (collectionName) => async (req, res) => {
   try {
     const Model = models[collectionName];
-    if (!Model) return res.status(400).json({ message: "Invalid collection" });
+    if (!Model) return res.status(404).json({ message: "Collection is not available in this project" });
 
     const { username, password, email, mobile } = req.body;
     let newUser;
@@ -56,7 +67,7 @@ exports.addUser = (collectionName) => async (req, res) => {
 exports.updateUser = (collectionName) => async (req, res) => {
   try {
     const Model = models[collectionName];
-    if (!Model) return res.status(400).json({ message: "Invalid collection" });
+    if (!Model) return res.status(404).json({ message: "Collection is not available in this project" });
 
     const user = await Model.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -83,7 +94,7 @@ exports.updateUser = (collectionName) => async (req, res) => {
 exports.deleteUser = (collectionName) => async (req, res) => {
   try {
     const Model = models[collectionName];
-    if (!Model) return res.status(400).json({ message: "Invalid collection" });
+    if (!Model) return res.status(404).json({ message: "Collection is not available in this project" });
 
     await Model.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Deleted successfully" });
