@@ -47,7 +47,7 @@ export default function SocietyRequestDetail() {
 
   return (
     <Layout>
-      <Link to="/admin/requests" className="back-link">
+      <Link to="/society-admin/requests" className="back-link">
         ← Back to Admin Requests
       </Link>
 

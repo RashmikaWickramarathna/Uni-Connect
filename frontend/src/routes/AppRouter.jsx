@@ -12,9 +12,9 @@ export default function AppRouter() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/submit" element={<SocietyRequestSubmit />} />
-        <Route path="/admin/requests" element={<SocietyRequestsAdmin />} />
-        <Route path="/admin" element={<Navigate to="/admin/requests" replace />} />
-        <Route path="/admin/requests/:id" element={<SocietyRequestDetail />} />
+        <Route path="/society-admin/requests" element={<SocietyRequestsAdmin />} />
+        <Route path="/society-admin" element={<Navigate to="/society-admin/requests" replace />} />
+        <Route path="/society-admin/requests/:id" element={<SocietyRequestDetail />} />
         <Route path="/society-register/:token" element={<SocietyRegisterByToken />} />
         <Route path="/create-event/:token" element={<CreateEvent />} />
       </Routes>

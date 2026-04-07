@@ -6,7 +6,7 @@ const { verifyEventToken, createEvent } = require("../controllers/eventControlle
 router.get("/verify-event-token/:token", verifyEventToken);
 
 // Create new event (protected by token in params)
-router.post("/events/:token", createEvent);
+router.post("/:token", createEvent);
 
 module.exports = router;
 

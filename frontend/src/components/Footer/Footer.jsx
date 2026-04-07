@@ -8,7 +8,7 @@ const Footer = () => {
     platform: [
       { label: 'Home', path: '/' },
       { label: 'Register Society', path: '/submit' },
-      { label: 'Admin Dashboard', path: '/admin' },
+      { label: 'Society Admin', path: '/society-admin/requests' },
     ],
     resources: [
       { label: 'How It Works', path: '/#features' },

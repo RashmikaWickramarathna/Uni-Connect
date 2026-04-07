@@ -73,7 +73,7 @@ const Navbar = () => {
             </li>
           ))}
           <li>
-            <Link to="/admin" className="btn-admin">
+            <Link to="/society-admin/requests" className="btn-admin">
               Admin
             </Link>
           </li>

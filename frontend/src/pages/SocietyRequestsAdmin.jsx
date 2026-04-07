@@ -203,26 +203,26 @@ export default function SocietyRequestsAdmin() {
                                     {/* Action button logic based on status */}
                                     {status === "Pending" && (
                                       <>
-                                        <Link to={`/admin/requests/${request._id}`} className="btn small view">View</Link>
+                                        <Link to={`/society-admin/requests/${request._id}`} className="btn small view">View</Link>
                                         <button onClick={() => handleApprove(request._id)} className="btn small primary">Approve</button>
                                         <button onClick={() => handleReject(request._id)} className="btn small danger">Reject</button>
                                       </>
                                     )}
 
                                     {status === "Approval Link Sent" && (
-                                      <Link to={`/admin/requests/${request._id}`} className="btn small view">View</Link>
+                                      <Link to={`/society-admin/requests/${request._id}`} className="btn small view">View</Link>
                                     )}
 
                                     {status === "Registered" && (
-                                      <Link to={`/admin/requests/${request._id}`} className="btn small view">View</Link>
+                                      <Link to={`/society-admin/requests/${request._id}`} className="btn small view">View</Link>
                                     )}
 
                                     {status === "Approved" && (
-                                      <Link to={`/admin/requests/${request._id}`} className="btn small view">View</Link>
+                                      <Link to={`/society-admin/requests/${request._id}`} className="btn small view">View</Link>
                                     )}
 
                                     {status === "Rejected" && (
-                                      <Link to={`/admin/requests/${request._id}`} className="btn small view">View</Link>
+                                      <Link to={`/society-admin/requests/${request._id}`} className="btn small view">View</Link>
                                     )}
                                   </td>
                                 </tr>

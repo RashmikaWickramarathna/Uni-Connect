@@ -36,7 +36,7 @@ const CTASection = () => {
             
             <button 
               className="btn-cta-secondary"
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/society-admin/requests')}
             >
               Admin Dashboard
             </button>
