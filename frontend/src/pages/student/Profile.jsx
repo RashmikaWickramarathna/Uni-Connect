@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authApi } from '../../api/authApi';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -258,11 +258,7 @@ export default function Profile() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  useEffect(() => {
-    fetchUserData();
-  }, [user?.userId]);
-
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     if (!user?.userId) {
       setLoading(false);
       return;
@@ -283,7 +279,11 @@ export default function Profile() {
       });
     }
     setLoading(false);
-  };
+  }, [user?.email, user?.userId]);
+
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
