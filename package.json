@@ -1,0 +1,15 @@
+{
+  "name": "uni-connect",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "start": "npm run backend",
+    "backend": "npm run dev --workspace=itp-real-project",
+    "backend:start": "npm run start --workspace=itp-real-project",
+    "frontend": "npm start --workspace=frontend",
+    "build": "npm run build --workspace=frontend"
+  }
+}
