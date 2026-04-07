@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { inquiryApi } from '../../api/inquiryApi';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -269,11 +269,12 @@ export default function MyInquiries() {
   const [editError, setEditError] = useState('');
   const [editSuccess, setEditSuccess] = useState('');
 
-  useEffect(() => {
-    fetchInquiries();
-  }, []);
+  const fetchInquiries = useCallback(async () => {
+    if (!user?.userId) {
+      setLoading(false);
+      return;
+    }
 
-  const fetchInquiries = async () => {
     try {
       const res = await inquiryApi.getMy(user.userId);
       setInquiries(res.data.inquiries || []);
@@ -281,7 +282,11 @@ export default function MyInquiries() {
       console.error('Failed to fetch inquiries');
     }
     setLoading(false);
-  };
+  }, [user?.userId]);
+
+  useEffect(() => {
+    fetchInquiries();
+  }, [fetchInquiries]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

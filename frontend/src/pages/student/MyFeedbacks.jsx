@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { feedbackApi } from '../../api/feedbackApi';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
@@ -273,11 +273,12 @@ export default function MyFeedbacks() {
   const [editError, setEditError] = useState('');
   const [editSuccess, setEditSuccess] = useState('');
 
-  useEffect(() => {
-    fetchFeedbacks();
-  }, []);
+  const fetchFeedbacks = useCallback(async () => {
+    if (!user?.userId) {
+      setLoading(false);
+      return;
+    }
 
-  const fetchFeedbacks = async () => {
     try {
       const res = await feedbackApi.getMy(user.userId);
       setFeedbacks(res.data.feedbacks || []);
@@ -285,7 +286,11 @@ export default function MyFeedbacks() {
       console.error('Failed to fetch feedbacks');
     }
     setLoading(false);
-  };
+  }, [user?.userId]);
+
+  useEffect(() => {
+    fetchFeedbacks();
+  }, [fetchFeedbacks]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

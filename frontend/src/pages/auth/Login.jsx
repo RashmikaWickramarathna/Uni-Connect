@@ -10,7 +10,7 @@ import styled from 'styled-components';
 
 const PageWrapper = styled.div`
   min-height: 100vh;
-  width : 100vw;
+  width: 100vw;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -48,6 +48,7 @@ const FooterLink = styled.p`
 const StyledLink = styled.span`
   color: #60a5fa;
   cursor: pointer;
+
   &:hover {
     text-decoration: underline;
   }
@@ -79,14 +80,12 @@ const StyledLabel = styled(Label)`
   color: var(--foreground);
 `;
 
-const InputRow = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
-  }
+const FooterActions = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  width: 100%;
 `;
 
 export default function Login() {
@@ -122,6 +121,7 @@ export default function Login() {
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     }
+
     setLoading(false);
   };
 
@@ -164,26 +164,16 @@ export default function Login() {
             </Button>
           </Form>
         </CardContent>
-   <div style={{widht:600,height:40, alignContent:"center",justifyContent:"space-between",alignItems:"center"}}>
-         <CardFooter style={{ display: 'flex', flexDirection: 'column', gap: '10px',justifyContent:'space-between',alignItems:'center' }}>
-         
-          <FooterLink>
-            <Link to="/social-login"><StyledLink>Social Login</StyledLink></Link>
-          </FooterLink>
-          <div style={{width:40}}/>
-          <FooterLink>
-            <Link to="/forgot-password"><StyledLink>Forgot password?</StyledLink></Link>
-          </FooterLink>
+        <CardFooter>
+          <FooterActions>
+            <FooterLink>
+              <Link to="/social-login"><StyledLink>Social Login</StyledLink></Link>
+            </FooterLink>
+            <FooterLink>
+              <Link to="/forgot-password"><StyledLink>Forgot password?</StyledLink></Link>
+            </FooterLink>
+          </FooterActions>
         </CardFooter>
-   </div>
-      <div style={{widht:600,height:40}}>
-         <CardFooter style={{ display: 'flex', flexDirection: 'column', gap: '10px',justifyContent:'space-between',alignItems:'center' }}>
-         
-          <FooterLink>
-            <Link to="/forgot-password"><StyledLink>Forgot password?</StyledLink></Link>
-          </FooterLink>
-        </CardFooter>
-   </div>
       </StyledCard>
     </PageWrapper>
   );

@@ -72,36 +72,10 @@ const StyledLabel = styled(Label)`
   color: var(--foreground);
 `;
 
-const SocialButton = styled(Button)`
-  background: #4285f4;
-  &:hover {
-    background: #3574dc;
-  }
-`;
-
-const Divider = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin: 1rem 0;
-  
-  &::before, &::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: rgba(0, 0, 0, 0.1);
-  }
-  
-  span {
-    font-size: 0.875rem;
-    color: rgba(0, 0, 0, 0.5);
-  }
-`;
-
 export default function SocialLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
