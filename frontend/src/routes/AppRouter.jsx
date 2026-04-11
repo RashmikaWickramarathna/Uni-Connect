@@ -17,10 +17,9 @@ const Signup = lazy(() => import("../pages/auth/Signup"));
 const ForgotPassword = lazy(() => import("../pages/auth/ForgotPassword"));
 const SocialLogin = lazy(() => import("../pages/auth/SocialLogin"));
 const SocialDashboard = lazy(() => import("../pages/student/SocialDashboard"));
-const StudentHome = lazy(() => import("../pages/student/Home"));
-const Profile = lazy(() => import("../pages/student/Profile"));
 const MyFeedbacks = lazy(() => import("../pages/student/MyFeedbacks"));
 const MyInquiries = lazy(() => import("../pages/student/MyInquiries"));
+const Profile = lazy(() => import("../pages/student/Profile"));
 const AdminDashboard = lazy(() => import("../pages/admin/Dashboard"));
 const AdminFeedbacks = lazy(() => import("../pages/admin/Feedbacks"));
 const AdminInquiries = lazy(() => import("../pages/admin/Inquiries"));
@@ -67,7 +66,7 @@ function ProtectedRoute({ children, allowedRole }) {
   if (requiredRole && userRole !== requiredRole) {
     return userRole === "admin"
       ? <Navigate to="/admin" replace />
-      : <Navigate to="/home" replace />;
+      : <Navigate to="/" replace />;
   }
 
   return children;
@@ -82,7 +81,7 @@ function PublicRoute({ children }) {
   if (user) {
     return userRole === "admin"
       ? <Navigate to="/admin" replace />
-      : <Navigate to="/home" replace />;
+      : <Navigate to="/" replace />;
   }
 
   return children;
@@ -107,7 +106,7 @@ export default function AppRouter() {
         <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
 
-        <Route path="/home" element={<ProtectedRoute allowedRole="student"><StudentHome /></ProtectedRoute>} />
+        <Route path="/home" element={<ProtectedRoute allowedRole="student"><Navigate to="/" replace /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute allowedRole="student"><Profile /></ProtectedRoute>} />
         <Route path="/my-feedbacks" element={<ProtectedRoute allowedRole="student"><MyFeedbacks /></ProtectedRoute>} />
         <Route path="/my-inquiries" element={<ProtectedRoute allowedRole="student"><MyInquiries /></ProtectedRoute>} />

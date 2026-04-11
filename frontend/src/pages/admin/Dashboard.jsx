@@ -84,43 +84,16 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          <section className="dashboard-summary-card">
-            <div className="summary-copy">
-              <h3>Admin Control Panel</h3>
-              <p>University Management System - manage society requests, feedback, and inquiries from one place.</p>
-            </div>
-
-            <div className="summary-stats">
-              <div className="summary-stat">
-                <div className="summary-value">3</div>
-                <div className="summary-label">Active Modules</div>
-              </div>
-
-              <div className="summary-stat">
-                <div className="summary-value">{metrics.pendingRequests}</div>
-                <div className="summary-label">Pending Requests</div>
-              </div>
-
-              <div className="summary-stat">
-                <div className="summary-value">24/7</div>
-                <div className="summary-label">System Active</div>
-              </div>
-            </div>
-          </section>
+          
 
           <div className="small-cards-grid">
             <SmallStatCard label="Pending" value={metrics.pendingRequests} color="#f59e0b" icon="P" />
-            <SmallStatCard label="Approved" value={metrics.approvedRequests} color="#10b981" icon="A" />
+            <SmallStatCard label="Approved Socities" value={metrics.approvedRequests} color="#10b981" icon="A" />
             <SmallStatCard label="Feedbacks" value={metrics.feedbackCount} color="#2563eb" icon="F" />
             <SmallStatCard label="Inquiries" value={metrics.inquiryCount} color="#8b5cf6" icon="I" />
           </div>
 
-          <div className="section-title-row">
-            <div>
-              <h3 className="section-title">Management Console</h3>
-              <p className="section-sub">These dashboard modules bring the feedback and inquiry tools into the new admin panel.</p>
-            </div>
-          </div>
+          
 
           <div className="module-grid">
             <Link className="module-card module-card-link" to="/society-admin/requests">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authApi } from '../../api/authApi';
 import Navbar from '../../components/Navbar/Navbar';
@@ -10,45 +10,83 @@ import { Label } from '../../components/ui/Label';
 import styled from 'styled-components';
 
 const PageWrapper = styled.div`
+  position: relative;
   min-height: 100vh;
-  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1492538368677-f6e0afe31dcc?q=80&w=2370&auto=format&fit=crop');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(251, 191, 36, 0.14), transparent 26%),
+    linear-gradient(180deg, #f8fbff 0%, #ffffff 45%, #f8fbff 100%);
+
+  &::before {
+    content: '';
+    position: fixed;
+    top: 6rem;
+    right: -9rem;
+    width: 24rem;
+    height: 24rem;
+    border-radius: 50%;
+    background: rgba(37, 99, 235, 0.08);
+    filter: blur(12px);
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: fixed;
+    left: -8rem;
+    bottom: 2rem;
+    width: 22rem;
+    height: 22rem;
+    border-radius: 50%;
+    background: rgba(251, 191, 36, 0.08);
+    filter: blur(14px);
+    pointer-events: none;
+  }
 `;
 
 const Main = styled.main`
-  padding: 7.5rem 2rem 2rem;
+  position: relative;
+  z-index: 1;
+  padding: 7.5rem 2rem 3rem;
   max-width: 800px;
   margin: 0 auto;
 `;
 
 const BackButton = styled.button`
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(147, 197, 253, 0.7);
+  color: #2563eb;
+  padding: 0.7rem 1.1rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 600;
   cursor: pointer;
   margin-bottom: 1rem;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.1);
   }
 `;
 
 const PageTitle = styled.h2`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: white;
+  font-size: clamp(1.8rem, 2.8vw, 2.3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #1f2937;
   margin-bottom: 1.5rem;
 `;
 
 const ProfileCard = styled(Card)`
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.97);
   backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(209, 213, 219, 0.72);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  border-radius: 1.35rem;
   margin-bottom: 1.5rem;
 `;
 
@@ -127,8 +165,8 @@ const DangerButton = styled(Button)`
 const StyledInput = styled(Input)`
   &:focus {
     outline: none;
-    border-color: #ec4899;
-    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2);
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
   }
 `;
 

@@ -34,12 +34,7 @@ const CTASection = () => {
               </svg>
             </button>
             
-            <button 
-              className="btn-cta-secondary"
-              onClick={() => navigate('/society-admin/requests')}
-            >
-              Admin Dashboard
-            </button>
+            
           </div>
         </div>
         

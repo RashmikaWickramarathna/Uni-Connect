@@ -47,8 +47,8 @@ const Home = () => {
                 <span className="highlight"> UniConnect</span>
               </h2>
               <p className="section-description">
-                Jump straight into your personal dashboard features without leaving the current landing page
-                experience.
+                Open your feedbacks, inquiries, and profile from home, then move directly into each separate
+                student page when you need it.
               </p>
             </div>
 

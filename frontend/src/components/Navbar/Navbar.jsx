@@ -14,9 +14,10 @@ const Navbar = () => {
   const authMenuRef = useRef(null);
   const userRole = normalizeAuthRole(user?.role);
   const isLoggedIn = Boolean(user);
-  const dashboardPath = userRole === 'admin' ? '/admin' : '/home';
+  const dashboardPath = userRole === 'admin' ? '/admin' : '/';
   const userLabel = user?.name || user?.email?.split('@')[0] || (userRole === 'admin' ? 'Admin' : 'Student');
-  const isStudentArea = ['/home', '/my-feedbacks', '/my-inquiries', '/profile'].includes(location.pathname);
+  const isStudentArea =
+    userRole === 'student' && ['/', '/home', '/my-feedbacks', '/my-inquiries', '/profile'].includes(location.pathname);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -49,7 +50,7 @@ const Navbar = () => {
   ];
 
   const studentNavLinks = [
-    { path: '/home', label: 'Home' },
+    { path: '/', label: 'Home' },
     { path: '/my-feedbacks', label: 'My Feedbacks' },
     { path: '/my-inquiries', label: 'My Inquiries' },
     { path: '/profile', label: 'My Profile' },
@@ -58,9 +59,6 @@ const Navbar = () => {
   const navLinks = isStudentArea ? studentNavLinks : publicNavLinks;
 
   const isActive = (path) => {
-    if (path.startsWith('/#')) {
-      return location.hash === path.substring(1);
-    }
     return location.pathname === path;
   };
 

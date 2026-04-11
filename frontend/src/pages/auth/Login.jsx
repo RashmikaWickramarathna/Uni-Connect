@@ -56,7 +56,7 @@ export default function Login() {
         }
 
         login(studentUser);
-        navigate('/home');
+        navigate('/');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
