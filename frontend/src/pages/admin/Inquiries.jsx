@@ -1,338 +1,160 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import React, { useEffect, useState } from 'react';
+
+import AdminLayout from '../../components/AdminLayout';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { inquiryApi } from '../../api/inquiryApi';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Textarea } from '../../components/ui/Label';
-import styled from 'styled-components';
 
-const PageWrapper = styled.div`
-  min-height: 100vh;
-  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=2370&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-`;
-
-const Header = styled.header`
-  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-  color: white;
-  padding: 1rem 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-`;
-
-const HeaderContent = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-`;
-
-const HeaderLeft = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-`;
-
-const BackButton = styled.button`
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: background 0.2s;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-  }
-`;
-
-const Logo = styled.h1`
-  font-size: 1.25rem;
-  font-weight: 700;
-`;
-
-const Main = styled.main`
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-`;
-
-const TitleRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
-`;
-
-const PageTitle = styled.h2`
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: white;
-`;
-
-const StatsBar = styled.div`
-  display: flex;
-  gap: 1rem;
-`;
-
-const StatBadge = styled.div`
-  background: white;
-  padding: 0.5rem 1rem;
-  border-radius: 2rem;
-  font-size: 0.875rem;
-  color: var(--muted-foreground);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
-`;
-
-const EmptyState = styled.p`
-  color: var(--muted-foreground);
-  text-align: center;
-  padding: 3rem;
-  background: white;
-  border-radius: 0.5rem;
-`;
-
-const InquiryCard = styled(Card)`
-  animation: slideUp 0.3s ease;
-  margin-bottom: 1rem;
-  border: 1px solid var(--border);
-`;
-
-const InquiryHeader = styled.div`
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-`;
-
-const UserInfo = styled.div``;
-
-const UserName = styled.p`
-  font-weight: 600;
-  font-size: 1.125rem;
-`;
-
-const UserEmail = styled.p`
-  font-size: 0.875rem;
-  color: var(--muted-foreground);
-`;
-
-const Badge = styled.span`
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.375rem 0.75rem;
-  border-radius: 2rem;
-  background: #dbeafe;
-  color: #2563eb;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-`;
-
-const DateBadge = styled.span`
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  background: var(--muted);
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-`;
-
-const Message = styled.p`
-  margin-bottom: 1rem;
-  color: var(--foreground);
-`;
-
-const ReplyBox = styled.div`
-  background: #f0f9ff;
-  border-left: 3px solid #2563eb;
-  padding: 0.75rem 1rem;
-  border-radius: 0 0.375rem 0.375rem 0;
-  margin-top: 0.5rem;
-`;
-
-const ReplyLabel = styled.p`
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #2563eb;
-  margin-bottom: 0.25rem;
-  text-transform: uppercase;
-`;
-
-const ReplyText = styled.p`
-  font-size: 0.875rem;
-  color: var(--foreground);
-`;
-
-const ReplyDate = styled.p`
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  margin-top: 0.25rem;
-`;
-
-const ReplySection = styled.div`
-  margin-top: 1rem;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 0.5rem;
-`;
-
-const LoadingWrapper = styled.div`
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const Spinner = styled.div`
-  width: 2.5rem;
-  height: 2.5rem;
-  border: 4px solid #e2e8f0;
-  border-top-color: #2563eb;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-`;
-
-const CardsGrid = styled.div`
-  display: grid;
-  gap: 1rem;
-`;
+function SmallStatCard({ label, value, color, icon }) {
+  return (
+    <div className="small-stat-card">
+      <div className="small-accent" style={{ background: color }} />
+      <div className="small-body">
+        <div className="small-icon" style={{ background: color }}>
+          {icon}
+        </div>
+        <div className="small-text">
+          <div className="small-value">{value}</div>
+          <div className="small-label">{label}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Inquiries() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [replyText, setReplyText] = useState({});
   const [activeId, setActiveId] = useState(null);
+  const [error, setError] = useState('');
+
+  const loadInquiries = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await inquiryApi.getAll();
+      setInquiries(response.data.inquiries || []);
+    } catch (loadError) {
+      setError(loadError?.response?.data?.message || 'Failed to fetch inquiry submissions.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetchInquiries();
+    loadInquiries();
   }, []);
-
-  const fetchInquiries = async () => {
-    try {
-      const res = await inquiryApi.getAll();
-      setInquiries(res.data.inquiries || []);
-    } catch (err) {
-      console.error('Failed to fetch inquiries');
-    }
-    setLoading(false);
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   const handleReply = async (id) => {
     if (!replyText[id]?.trim()) return;
+
     try {
       await inquiryApi.reply(id, replyText[id]);
-      setReplyText({ ...replyText, [id]: '' });
+      setReplyText((current) => ({ ...current, [id]: '' }));
       setActiveId(null);
-      fetchInquiries();
-    } catch (err) {
-      console.error('Failed to reply');
+      loadInquiries();
+    } catch (replyError) {
+      setError(replyError?.response?.data?.message || 'Failed to send the inquiry reply.');
     }
   };
 
-  if (loading) {
-    return (
-      <LoadingWrapper>
-        <Spinner />
-      </LoadingWrapper>
-    );
-  }
+  const repliedCount = inquiries.filter((inquiry) => Boolean(inquiry.adminReply)).length;
+  const pendingCount = inquiries.length - repliedCount;
 
   return (
-    <PageWrapper>
-      <Header>
-        <HeaderContent>
-          <HeaderLeft>
-            <BackButton onClick={() => navigate('/admin')}>← Back</BackButton>
-            <Logo>Inquiry Management</Logo>
-          </HeaderLeft>
-          <Button variant="secondary" size="sm" onClick={handleLogout}>
-            Logout
-          </Button>
-        </HeaderContent>
-      </Header>
+    <AdminLayout>
+      <div className="page-header">
+        <h2>Inquiry Management</h2>
+        <p>Review user questions and send replies from the unified first-image admin panel layout.</p>
+      </div>
 
-      <Main>
-        <TitleRow>
-          <PageTitle>All Inquiry Submissions</PageTitle>
-          <StatsBar>
-            <StatBadge>Total: {inquiries.length}</StatBadge>
-          </StatsBar>
-        </TitleRow>
+      {error && (
+        <div className="error-banner">
+          <div className="error-text">{error}</div>
+          <div className="error-actions">
+            <button className="btn" type="button" onClick={() => setError('')}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
-        {inquiries.length === 0 ? (
-          <EmptyState>No inquiry submissions yet.</EmptyState>
-        ) : (
-          <CardsGrid>
-            {inquiries.map((inq) => (
-              <InquiryCard key={inq._id}>
-                <CardHeader style={{ paddingBottom: '0.5rem' }}>
-                  <InquiryHeader>
-                    <UserInfo>
-                      <UserName>{inq.name}</UserName>
-                      <UserEmail>{inq.email}</UserEmail>
-                    </UserInfo>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <Badge>{inq.subject}</Badge>
-                      <DateBadge>{new Date(inq.createdAt).toLocaleDateString()}</DateBadge>
+      {loading ? (
+        <div className="empty-state-panel">
+          <LoadingSpinner />
+        </div>
+      ) : (
+        <>
+          <div className="small-cards-grid">
+            <SmallStatCard label="Total" value={inquiries.length} color="#2563eb" icon="T" />
+            <SmallStatCard label="Replied" value={repliedCount} color="#10b981" icon="R" />
+            <SmallStatCard label="Pending" value={pendingCount} color="#f59e0b" icon="P" />
+          </div>
+
+          {inquiries.length === 0 ? (
+            <div className="empty-state-panel">No inquiry submissions yet.</div>
+          ) : (
+            <div className="list-grid">
+              {inquiries.map((inquiry) => (
+                <div className="entry-card" key={inquiry._id}>
+                  <div className="entry-header">
+                    <div>
+                      <h3 className="entry-name">{inquiry.name}</h3>
+                      <div className="entry-email">{inquiry.email}</div>
                     </div>
-                  </InquiryHeader>
-                </CardHeader>
-                <CardContent>
-                  <Message>{inq.message}</Message>
-                  
-                  {inq.adminReply ? (
-                    <ReplyBox>
-                      <ReplyLabel>Admin Reply</ReplyLabel>
-                      <ReplyText>{inq.adminReply}</ReplyText>
-                      <ReplyDate>
-                        Replied on: {inq.repliedAt ? new Date(inq.repliedAt).toLocaleDateString() : ''}
-                      </ReplyDate>
-                    </ReplyBox>
+
+                    <div className="entry-badges">
+                      <span className="subject-badge">{inquiry.subject}</span>
+                      <span className="date-badge">{new Date(inquiry.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+
+                  <p className="entry-message">{inquiry.message}</p>
+
+                  {inquiry.adminReply ? (
+                    <div className="reply-box">
+                      <p className="reply-label">Admin Reply</p>
+                      <p className="entry-message">{inquiry.adminReply}</p>
+                      <div className="reply-date">
+                        Replied on: {inquiry.repliedAt ? new Date(inquiry.repliedAt).toLocaleDateString() : '-'}
+                      </div>
+                    </div>
                   ) : (
-                    <ReplySection>
-                      {activeId === inq._id ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          <Textarea
+                    <div className="reply-controls">
+                      {activeId === inquiry._id ? (
+                        <>
+                          <textarea
+                            className="reply-textarea"
                             placeholder="Write your reply..."
-                            value={replyText[inq._id] || ''}
-                            onChange={(e) => setReplyText({ ...replyText, [inq._id]: e.target.value })}
+                            value={replyText[inquiry._id] || ''}
+                            onChange={(event) =>
+                              setReplyText((current) => ({ ...current, [inquiry._id]: event.target.value }))
+                            }
                           />
-                          <ButtonGroup>
-                            <Button size="sm" onClick={() => handleReply(inq._id)}>Send Reply</Button>
-                            <Button size="sm" variant="outline" onClick={() => setActiveId(null)}>Cancel</Button>
-                          </ButtonGroup>
-                        </div>
+                          <div className="actions">
+                            <button className="btn primary small" type="button" onClick={() => handleReply(inquiry._id)}>
+                              Send Reply
+                            </button>
+                            <button className="btn small" type="button" onClick={() => setActiveId(null)}>
+                              Cancel
+                            </button>
+                          </div>
+                        </>
                       ) : (
-                        <Button size="sm" variant="outline" onClick={() => setActiveId(inq._id)}>Reply to Inquiry</Button>
+                        <div className="actions">
+                          <button className="btn small" type="button" onClick={() => setActiveId(inquiry._id)}>
+                            Reply to Inquiry
+                          </button>
+                        </div>
                       )}
-                    </ReplySection>
+                    </div>
                   )}
-                </CardContent>
-              </InquiryCard>
-            ))}
-          </CardsGrid>
-        )}
-      </Main>
-    </PageWrapper>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </AdminLayout>
   );
 }

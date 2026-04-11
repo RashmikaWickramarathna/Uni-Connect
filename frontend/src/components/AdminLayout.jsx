@@ -1,45 +1,69 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { FiBarChart2, FiBell, FiCalendar, FiClipboard, FiCreditCard, FiFileText, FiHelpCircle, FiHome, FiLogOut, FiMessageSquare, FiSettings, FiUsers } from "react-icons/fi";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+
+import { useAuth } from "../context/AuthContext";
 import "../styles/admin.css";
-import "../styles/theme.css";
 
-const MenuItem = ({ icon, label, active, onClick }) => (
-  <button 
-    className={`menu-item ${active ? "active" : ""}`} 
-    onClick={onClick}
-  >
-    <span className="mi-icon" aria-hidden>{icon}</span>
-    <span className="mi-label">{label}</span>
-  </button>
-);
+const menuItems = [
+  { label: "Dashboard", icon: FiHome, path: "/admin" },
+  { label: "User Accounts", icon: FiUsers, disabled: true },
+  { label: "Society Approvals", icon: FiClipboard, path: "/society-admin/requests" },
+  { label: "Events", icon: FiCalendar, disabled: true },
+  { label: "Ticket Reservations", icon: FiFileText, disabled: true },
+  { label: "Payments", icon: FiCreditCard, disabled: true },
+  { label: "Feedback", icon: FiMessageSquare, path: "/admin/feedbacks" },
+  { label: "Inquiries", icon: FiHelpCircle, path: "/admin/inquiries" },
+  { label: "Reports", icon: FiBarChart2, disabled: true },
+  { label: "Settings", icon: FiSettings, disabled: true },
+];
 
-export default function AdminLayout({ children, title = "Uni-Connect - Admin Panel", subtitle = "Society and Club Management System" }) {
-  const [active, setActive] = useState("Society Approvals");
+function isActiveRoute(itemPath, pathname) {
+  if (!itemPath) return false;
+  if (itemPath === "/admin") return pathname === itemPath;
+  return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+}
 
-  const menu = [
-    "Dashboard",
-    "User Accounts",
-    "Society Approvals",
-    "Events",
-    "Ticket Reservations",
-    "Payments",
-    "Feedback",
-    "Reports",
-    "Settings",
-    "Logout",
-  ];
+function SidebarItem({ item, pathname }) {
+  const Icon = item.icon;
+  const className = `menu-item${isActiveRoute(item.path, pathname) ? " active" : ""}${item.disabled ? " disabled" : ""}`;
 
-  const icons = {
-    Dashboard: "🏠",
-    "User Accounts": "👥",
-    "Society Approvals": "📨",
-    Events: "📅",
-    "Ticket Reservations": "🎟️",
-    Payments: "💳",
-    Feedback: "🗣️",
-    Reports: "📊",
-    Settings: "⚙️",
-    Logout: "⤴️",
+  if (item.disabled) {
+    return (
+      <div className={className}>
+        <span className="mi-icon" aria-hidden>
+          <Icon />
+        </span>
+        <span className="mi-label">{item.label}</span>
+      </div>
+    );
+  }
+
+  return (
+    <Link to={item.path} className={className}>
+      <span className="mi-icon" aria-hidden>
+        <Icon />
+      </span>
+      <span className="mi-label">{item.label}</span>
+    </Link>
+  );
+}
+
+export default function AdminLayout({
+  children,
+  title = "Uni-Connect - Admin Panel",
+  subtitle = "Society and Club Management System",
+}) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const content = typeof children === "function" ? children({ pathname: location.pathname }) : children;
+  const displayName = user?.name || "Admin";
+  const displayEmail = user?.email || "admin@uni-connect.edu";
+
+  const handleLogout = () => {
+    logout();
+    navigate("/admin-login");
   };
 
   return (
@@ -47,23 +71,24 @@ export default function AdminLayout({ children, title = "Uni-Connect - Admin Pan
       <aside className="admin-sidebar">
         <div className="brand">
           <div className="brand-mark">UC</div>
-          <div>
+          <div className="brand-copy">
             <div className="brand-title">Uni-Connect</div>
             <div className="brand-sub">Admin Panel</div>
           </div>
         </div>
 
-        <nav className="menu">
-          {menu.map((m) => (
-            <MenuItem
-              key={m}
-              icon={icons[m]}
-              label={m}
-              active={active === m}
-              onClick={() => setActive(m)}
-            />
+        <nav className="menu" aria-label="Admin navigation">
+          {menuItems.map((item) => (
+            <SidebarItem key={item.label} item={item} pathname={location.pathname} />
           ))}
         </nav>
+
+        <button className="menu-item menu-item-logout" onClick={handleLogout} type="button">
+          <span className="mi-icon" aria-hidden>
+            <FiLogOut />
+          </span>
+          <span className="mi-label">Logout</span>
+        </button>
 
         <div className="sidebar-footer">v1.0 • Uni-Connect</div>
       </aside>
@@ -71,25 +96,26 @@ export default function AdminLayout({ children, title = "Uni-Connect - Admin Pan
       <div className="admin-main">
         <header className="admin-topbar">
           <div className="topbar-left">
-            <h2 className="system-title">{title}</h2>
+            <h1 className="system-title">{title}</h1>
             <div className="system-sub">{subtitle}</div>
           </div>
+
           <div className="topbar-right">
-            <button className="icon-btn">🔔</button>
-           
+            <button className="icon-btn" type="button" aria-label="Notifications">
+              <FiBell />
+            </button>
+
             <div className="profile">
               <div className="avatar">A</div>
               <div className="profile-info">
-                <div className="name">Admin</div>
-                <div className="email">admin@uni-connect.edu</div>
+                <div className="name">{displayName}</div>
+                <div className="email">{displayEmail}</div>
               </div>
             </div>
           </div>
         </header>
 
-        <section className="admin-content">
-          {children({ selectedModule: active })}
-        </section>
+        <main className="admin-content">{content}</main>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiLock, FiMail } from 'react-icons/fi';
+import { FiLock, FiMail, FiShield } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
 import {
@@ -17,16 +17,15 @@ import {
   AuthPrimaryButton,
   AuthUtilityLink,
 } from '../../components/auth/AuthPageLayout';
-import { authApi } from '../../api/authApi';
 import { useAuth } from '../../context/AuthContext';
 
 const featurePoints = [
-  'Manage student feedback and inquiries from one secure account',
-  'Move between dashboard tools without repeated login prompts',
-  'Stay connected with Uni-Connect events, societies, and profile updates',
+  'Access the admin dashboard from a dedicated login path',
+  'Manage feedbacks and inquiries from one protected control panel',
+  'Return to the normal user login flow any time from this screen',
 ];
 
-export default function Login() {
+export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -39,53 +38,39 @@ export default function Login() {
     setError('');
     setLoading(true);
 
-    try {
-      const res = await authApi.login({ email, password });
-      if (res.data.user) {
-        const studentUser = {
-          ...res.data.user,
-          email: res.data.user?.email || email,
-          userId: res.data.user?.id || res.data.user?._id || res.data.user?.userId,
-          role: res.data.user?.role || 'student',
-        };
-
-        if (!studentUser.userId) {
-          setError('Login succeeded, but the user record returned by the server is missing an id.');
-          setLoading(false);
-          return;
-        }
-
-        login(studentUser);
-        navigate('/home');
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+    if (email === 'admin@admin.com' && password === 'admin123') {
+      login({
+        email: 'admin@admin.com',
+        userId: 'admin',
+        role: 'admin',
+      });
+      navigate('/admin');
+      setLoading(false);
+      return;
     }
 
+    setError('Invalid admin credentials. Use the configured admin login details.');
     setLoading(false);
   };
 
   return (
     <AuthPageLayout
-      brandTag="Secure University Access"
-      showcaseTitle="Connect with"
-      showcaseAccent="UniConnect"
-      showcaseText="Sign in once and move straight into your student dashboard, feedback tools, inquiry history, and profile management without repeated login interruptions."
+      brandTag="Administrator Access"
+      showcaseTitle="Admin"
+      showcaseAccent="Login"
+      showcaseText="Use the same updated auth design to sign into the Uni-Connect admin area and continue directly into the management dashboard."
       featurePoints={featurePoints}
-      formTag="Student Login"
-      formTitle="Welcome Back"
-      formSubtitle="Enter your student account details to continue into Uni-Connect."
+      formTag="Admin Login"
+      formTitle="Admin Login"
+      formSubtitle="Enter the administrator credentials to continue into the protected admin dashboard."
       footer={
         <>
           <AuthDivider />
           <AuthLinkRow>
-            <AuthUtilityLink to="/admin-login">Admin Login</AuthUtilityLink>
-            <AuthUtilityLink to="/social-login">Society Login</AuthUtilityLink>
-            <AuthUtilityLink to="/forgot-password">Forgot password?</AuthUtilityLink>
+            <AuthUtilityLink to="/login">Back to User Login</AuthUtilityLink>
           </AuthLinkRow>
           <AuthHelperNote>
-            Use your registered student email and password here. Once signed in, the protected pages will open
-            directly without asking you to log in again.
+            This admin screen uses the same shared background and blue auth styling as the other sign-in pages.
           </AuthHelperNote>
         </>
       }
@@ -102,7 +87,7 @@ export default function Login() {
             <AuthInput
               id="email"
               type="email"
-              placeholder="Enter your email"
+              placeholder="Enter admin email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -119,7 +104,7 @@ export default function Login() {
             <AuthInput
               id="password"
               type="password"
-              placeholder="Enter your password"
+              placeholder="Enter admin password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -128,7 +113,8 @@ export default function Login() {
         </AuthInputBlock>
 
         <AuthPrimaryButton type="submit" fullWidth disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
+          <FiShield style={{ marginRight: '0.5rem' }} />
+          {loading ? 'Logging in...' : 'Login as Admin'}
         </AuthPrimaryButton>
       </AuthForm>
     </AuthPageLayout>

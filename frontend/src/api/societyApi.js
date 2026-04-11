@@ -58,7 +58,3 @@ export const sendEventLink = async (id, adminName) => {
   return res.data;
 };
 
-export const approveSociety = (id) => {
-  return apiClient.post(`/societies/approve/${id}`);
-};
-

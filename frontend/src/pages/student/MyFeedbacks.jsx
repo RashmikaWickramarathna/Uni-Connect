@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { feedbackApi } from '../../api/feedbackApi';
+import Navbar from '../../components/Navbar/Navbar';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -17,57 +18,8 @@ const PageWrapper = styled.div`
   background-attachment: fixed;
 `;
 
-const Header = styled.header`
-  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-  color: white;
-  padding: 1rem 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-`;
-
-const HeaderContent = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-`;
-
-const Logo = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: black;
-`;
-
-const LogoIcon = styled.span`
-  width: 2.5rem;
-  height: 2.5rem;
-  background: white;
-  border-radius: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #2563eb;
-  font-weight: bold;
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-`;
-
-const UserBadge = styled.div`
-  background: rgba(255, 255, 255, 0.2);
-  padding: 0.5rem 1rem;
-  border-radius: 2rem;
-  font-size: 0.875rem;
-`;
-
 const Main = styled.main`
-  padding: 2rem;
+  padding: 7.5rem 2rem 2rem;
   max-width: 1200px;
   margin: 0 auto;
 `;
@@ -252,7 +204,7 @@ const Spinner = styled.div`
 `;
 
 export default function MyFeedbacks() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [feedbacks, setFeedbacks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -374,23 +326,7 @@ export default function MyFeedbacks() {
 
   return (
     <PageWrapper>
-      <Header>
-        <HeaderContent>
-          <Logo>
-            <LogoIcon>U</LogoIcon>
-            University Portal
-          </Logo>
-          <HeaderRight>
-            <UserBadge>Student: {user?.email?.split('@')[0]}</UserBadge>
-            <Button variant="secondary" size="sm" onClick={() => navigate('/home')}>
-              Dashboard
-            </Button>
-            <Button variant="secondary" size="sm" onClick={logout}>
-              Logout
-            </Button>
-          </HeaderRight>
-        </HeaderContent>
-      </Header>
+      <Navbar />
 
       <Main>
         <BackButton onClick={() => navigate('/home')}>← Back to Dashboard</BackButton>

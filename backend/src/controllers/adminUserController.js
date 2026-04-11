@@ -10,14 +10,14 @@ const loadModel = (path) => {
 };
 
 const models = {
-  users: loadModel("../Model/UserModel"),
-  TableReservation: loadModel("../Model/TableReservationModel"),
-  OrderManagement: loadModel("../Model/OrderManagementModel"),
-  MenuManagement: loadModel("../Model/MenuManagementModel"),
-  InventoryManagement: loadModel("../Model/InventoryManagementModel"),
-  InquiryManagement: loadModel("../Model/InquiryManagementModel"),
-  FeedbackManagement: loadModel("../Model/FeedbackManagementModel"),
-  DeliveryManagement: loadModel("../Model/DeliveryManagementModel"),
+  users: loadModel("../models/user"),
+  TableReservation: loadModel("../models/tableReservation"),
+  OrderManagement: loadModel("../models/orderManagement"),
+  MenuManagement: loadModel("../models/menuManagement"),
+  InventoryManagement: loadModel("../models/inventoryManagement"),
+  InquiryManagement: loadModel("../models/inquiryManagement"),
+  FeedbackManagement: loadModel("../models/feedbackManagement"),
+  DeliveryManagement: loadModel("../models/deliveryManagement"),
 };
 
 // Fetch all users/managers

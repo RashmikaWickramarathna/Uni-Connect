@@ -1,4 +1,4 @@
-const SocietyRequest = require("../models/SocietyRequest");
+const SocietyRequest = require("../models/societyRequest");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const ApprovalToken = require("../models/approvalToken");

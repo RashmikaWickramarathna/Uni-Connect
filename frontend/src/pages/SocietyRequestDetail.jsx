@@ -1,10 +1,26 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import Layout from "../components/Layout";
+import { Link, useParams } from "react-router-dom";
+
+import AdminLayout from "../components/AdminLayout";
 import LoadingSpinner from "../components/LoadingSpinner";
-import ToastMessage from "../components/ToastMessage";
 import StatusBadge from "../components/StatusBadge";
+import ToastMessage from "../components/ToastMessage";
 import { getSocietyRequestById, sendEventLink } from "../api/societyApi";
+
+function MemberCard({ title, member }) {
+  return (
+    <div className="member-card">
+      <h3>{title}</h3>
+      <p><strong>Name:</strong> {member?.name || "-"}</p>
+      <p><strong>Designation:</strong> {member?.designation || "-"}</p>
+      {member?.studentId && <p><strong>Student ID:</strong> {member.studentId}</p>}
+      <p><strong>Email:</strong> {member?.email || "-"}</p>
+      <p><strong>Phone:</strong> {member?.phone || "-"}</p>
+      <p><strong>Faculty:</strong> {member?.faculty || "-"}</p>
+      {member?.academicYear && <p><strong>Academic Year:</strong> {member.academicYear}</p>}
+    </div>
+  );
+}
 
 export default function SocietyRequestDetail() {
   const { id } = useParams();
@@ -32,25 +48,32 @@ export default function SocietyRequestDetail() {
     loadRequest();
   }, [id]);
 
-  const renderMember = (title, member) => (
-    <div className="card">
-      <h3>{title}</h3>
-      <p><strong>Name:</strong> {member?.name}</p>
-      <p><strong>Designation:</strong> {member?.designation}</p>
-      {member?.studentId && <p><strong>Student ID:</strong> {member.studentId}</p>}
-      <p><strong>Email:</strong> {member?.email}</p>
-      <p><strong>Phone:</strong> {member?.phone}</p>
-      <p><strong>Faculty:</strong> {member?.faculty}</p>
-      {member?.academicYear && <p><strong>Academic Year:</strong> {member.academicYear}</p>}
-    </div>
-  );
+  const handleSendEventLink = async () => {
+    const adminName = window.prompt("Enter your name (will be recorded as sender)", "Admin");
+    if (!adminName) return;
+
+    try {
+      setSendingEventLink(true);
+      const response = await sendEventLink(id, adminName);
+      setRequest((current) => ({
+        ...current,
+        eventAccessLink: response.eventAccessLink,
+        eventAccessSentBy: response.eventAccessSentBy || adminName,
+        eventAccessSentAt: response.eventAccessSentAt || new Date().toISOString(),
+      }));
+      setToast({ type: "success", message: response.message || "Event link sent successfully." });
+    } catch (error) {
+      setToast({
+        type: "error",
+        message: error?.response?.data?.message || "Failed to send the event access link",
+      });
+    } finally {
+      setSendingEventLink(false);
+    }
+  };
 
   return (
-    <Layout>
-      <Link to="/society-admin/requests" className="back-link">
-        ← Back to Admin Requests
-      </Link>
-
+    <AdminLayout>
       <ToastMessage
         type={toast.type}
         message={toast.message}
@@ -58,85 +81,140 @@ export default function SocietyRequestDetail() {
       />
 
       {loading ? (
-        <LoadingSpinner />
+        <div className="empty-state-panel">
+          <LoadingSpinner />
+        </div>
       ) : request ? (
-        <div className="stack">
-          <div className="card">
-            <div className="row-between">
-              <h2>{request.societyName}</h2>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                {request.status === 'Approved' && (
-                  <button
-                    className="btn"
-                    onClick={async () => {
-                      const adminName = window.prompt('Enter your name (will be recorded as sender)', 'Admin');
-                      if (!adminName) return;
-                      try {
-                        setSendingEventLink(true);
-                        const res = await sendEventLink(id, adminName);
-                        setRequest((prev) => ({ ...prev, eventAccessLink: res.eventAccessLink, eventAccessSentBy: adminName, eventAccessSentAt: new Date().toISOString() }));
-                        setToast({ type: 'success', message: res.message || 'Event link sent' });
-                      } catch (err) {
-                        setToast({ type: 'error', message: err?.response?.data?.message || 'Failed to send event link' });
-                      } finally {
-                        setSendingEventLink(false);
-                      }
-                    }}
-                    disabled={sendingEventLink}
-                  >
-                    {sendingEventLink ? 'Sending…' : 'Send Approval Link'}
-                  </button>
-                )}
-                <StatusBadge status={request.status} />
-              </div>
+        <>
+          <div className="page-header split">
+            <div>
+              <h2>Society Request Detail</h2>
+              <p>Review the complete application, officer details, and event-link access for this society.</p>
             </div>
 
-            <p><strong>Short Name:</strong> {request.shortName || "-"}</p>
-            <p><strong>Category:</strong> {request.category}</p>
-            <p><strong>Faculty:</strong> {request.faculty}</p>
-            <p><strong>Official Email:</strong> {request.officialEmail}</p>
-            <p><strong>Contact Number:</strong> {request.contactNumber}</p>
-            <p><strong>Description:</strong> {request.description}</p>
-            <p><strong>Objectives:</strong> {request.objectives || "-"}</p>
-            <p><strong>Rejection Reason:</strong> {request.rejectionReason || "-"}</p>
+            <div className="page-actions">
+              <Link to="/society-admin/requests" className="btn">
+                Back to Requests
+              </Link>
+
+              {request.status === "Approved" && (
+                <button className="btn primary" type="button" onClick={handleSendEventLink} disabled={sendingEventLink}>
+                  {sendingEventLink ? "Sending..." : "Send Event Link"}
+                </button>
+              )}
+            </div>
           </div>
 
-          {renderMember("Advisor", request.advisor)}
-          {renderMember("President", request.president)}
-          {renderMember("Secretary", request.secretary)}
-          {renderMember("Treasurer", request.treasurer)}
-
-          <div className="card">
-            <h3>Event Access</h3>
-            {request.eventAccessLink ? (
-              <div>
-                <p><strong>Link:</strong> <a href={request.eventAccessLink} target="_blank" rel="noreferrer">Open</a></p>
-                <p><strong>Sent By:</strong> {request.eventAccessSentBy || '-'}</p>
-                <p><strong>Sent At:</strong> {request.eventAccessSentAt ? new Date(request.eventAccessSentAt).toLocaleString() : '-'}</p>
-              </div>
-            ) : (
-              <p>No event access link has been sent.</p>
-            )}
-            <hr />
-            <h3>Executive Members</h3>
-            {request.executiveMembers?.length ? (
-              request.executiveMembers.map((member, index) => (
-                <div key={index} className="executive-box">
-                  <p><strong>Name:</strong> {member.name}</p>
-                  <p><strong>Designation:</strong> {member.designation}</p>
-                  <p><strong>Student ID:</strong> {member.studentId}</p>
-                  <p><strong>Email:</strong> {member.email}</p>
-                  <p><strong>Phone:</strong> {member.phone}</p>
-                  <p><strong>Faculty:</strong> {member.faculty}</p>
-                  <p><strong>Academic Year:</strong> {member.academicYear}</p>
+          <div className="detail-grid">
+            <section className="detail-panel detail-panel-wide">
+              <div className="detail-panel-header">
+                <div>
+                  <h3 className="detail-panel-title">{request.societyName}</h3>
+                  <p className="section-sub">Review the submitted registration information and current approval state.</p>
                 </div>
-              ))
-            ) : (
-              <p>No executive members found.</p>
-            )}
+                <StatusBadge status={request.status} />
+              </div>
+
+              <div className="detail-meta-grid">
+                <div className="detail-item">
+                  <strong>Short Name</strong>
+                  <span>{request.shortName || "-"}</span>
+                </div>
+                <div className="detail-item">
+                  <strong>Category</strong>
+                  <span>{request.category || "-"}</span>
+                </div>
+                <div className="detail-item">
+                  <strong>Faculty</strong>
+                  <span>{request.faculty || "-"}</span>
+                </div>
+                <div className="detail-item">
+                  <strong>Official Email</strong>
+                  <span>{request.officialEmail || "-"}</span>
+                </div>
+                <div className="detail-item">
+                  <strong>Contact Number</strong>
+                  <span>{request.contactNumber || "-"}</span>
+                </div>
+                <div className="detail-item">
+                  <strong>Rejection Reason</strong>
+                  <span>{request.rejectionReason || "-"}</span>
+                </div>
+                <div className="detail-item detail-panel-wide">
+                  <strong>Description</strong>
+                  <p>{request.description || "-"}</p>
+                </div>
+                <div className="detail-item detail-panel-wide">
+                  <strong>Objectives</strong>
+                  <p>{request.objectives || "-"}</p>
+                </div>
+              </div>
+            </section>
+
+            <section className="detail-panel">
+              <div className="detail-panel-header">
+                <h3 className="detail-panel-title">Event Access</h3>
+              </div>
+
+              {request.eventAccessLink ? (
+                <div className="detail-meta-grid">
+                  <div className="detail-item">
+                    <strong>Link</strong>
+                    <a className="inline-link" href={request.eventAccessLink} target="_blank" rel="noreferrer">
+                      Open Event Access
+                    </a>
+                  </div>
+                  <div className="detail-item">
+                    <strong>Sent By</strong>
+                    <span>{request.eventAccessSentBy || "-"}</span>
+                  </div>
+                  <div className="detail-item">
+                    <strong>Sent At</strong>
+                    <span>{request.eventAccessSentAt ? new Date(request.eventAccessSentAt).toLocaleString() : "-"}</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="section-sub">No event access link has been sent for this society yet.</p>
+              )}
+            </section>
+
+            <section className="detail-panel">
+              <div className="detail-panel-header">
+                <h3 className="detail-panel-title">Primary Officers</h3>
+              </div>
+
+              <div className="member-grid">
+                <MemberCard title="Advisor" member={request.advisor} />
+                <MemberCard title="President" member={request.president} />
+                <MemberCard title="Secretary" member={request.secretary} />
+                <MemberCard title="Treasurer" member={request.treasurer} />
+              </div>
+            </section>
+
+            <section className="detail-panel detail-panel-wide">
+              <div className="detail-panel-header">
+                <h3 className="detail-panel-title">Executive Members</h3>
+              </div>
+
+              {request.executiveMembers?.length ? (
+                <div className="member-grid">
+                  {request.executiveMembers.map((member, index) => (
+                    <MemberCard
+                      key={`${member.email || member.studentId || "member"}-${index}`}
+                      title={member.designation || `Executive Member ${index + 1}`}
+                      member={member}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="section-sub">No executive members were submitted for this request.</p>
+              )}
+            </section>
           </div>
-        </div>
-      ) : null}
-    </Layout>
+        </>
+      ) : (
+        <div className="empty-state-panel">No request details were found for this society.</div>
+      )}
+    </AdminLayout>
   );
 }
