@@ -1,7 +1,15 @@
 // backend/controllers/ticketBookingController.js
 // UniConnect – Ticket Booking Controller
 
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+let stripe = null;
+
+if (process.env.STRIPE_SECRET_KEY) {
+  try {
+    stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+  } catch (error) {
+    console.warn('Stripe SDK is unavailable. Install the "stripe" package to enable online payment intents.');
+  }
+}
 const Ticket = require("../Model/Ticket");
 const Event  = require("../Model/Event");
 
@@ -79,6 +87,12 @@ const createTicketPaymentIntent = async (req, res) => {
     }
 
     // Paid ticket – create Stripe intent
+    if (!stripe) {
+      return res.status(503).json({
+        message: "Stripe is not configured. Online payment intents are unavailable in this environment.",
+      });
+    }
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount:   Math.round(totalAmount * 100),
       currency: "lkr",

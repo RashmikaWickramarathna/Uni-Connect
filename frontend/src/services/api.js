@@ -82,13 +82,13 @@ export const ticketAPI = {
 export const eventAPI = {
   // Get all published upcoming events
   getAll: () =>
-    request("/tickets/events"),
+    request("/events"),
 
   // Get single event by ID
   getById: (eventId) =>
-    request(`/tickets/events/${eventId}`),
+    request(`/events/${eventId}`),
 
   // Create event (admin/testing)
   create: (body) =>
-    request("/tickets/events", { method: "POST", body: JSON.stringify(body) }),
+    request("/events", { method: "POST", body: JSON.stringify(body) }),
 };
