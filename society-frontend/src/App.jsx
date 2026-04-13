@@ -6,14 +6,11 @@ import NotificationBanner from './components/NotificationBanner';
 import PostGenerator from './components/PostGenerator';
 import { getSocietyEvents, createEvent, updateEvent, deleteEvent } from './api';
 
-// Replace this with your group's actual auth system
-// e.g. const user = JSON.parse(localStorage.getItem('user'));
 const DEMO_USER = {
   name: 'Computer Science Society',
-  email: 'cssociety@university.edu',
+  email: 'cssociety@university.edu', // MUST match DB
   role: 'society',
 };
-
 export default function App() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
