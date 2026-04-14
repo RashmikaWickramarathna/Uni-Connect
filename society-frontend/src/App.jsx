@@ -8,7 +8,7 @@ import { getSocietyEvents, createEvent, updateEvent, deleteEvent } from './api';
 
 const DEMO_USER = {
   name: 'Computer Science Society',
-  email: 'cssociety@university.edu', // MUST match DB
+  email: 'cssociety@university.edu',
   role: 'society',
 };
 export default function App() {
@@ -21,7 +21,8 @@ export default function App() {
   const [postEvent, setPostEvent] = useState(null);
   const [search, setSearch] = useState('');
 
-  const user = DEMO_USER;
+ const user =
+  JSON.parse(localStorage.getItem("user")) || DEMO_USER;
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
