@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 const AuthContext = createContext(null);
 const USER_STORAGE_KEY = 'user';
@@ -44,13 +44,8 @@ function readStoredUser() {
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setUser(readStoredUser());
-    setLoading(false);
-  }, []);
+  const [user, setUser] = useState(() => readStoredUser());
+  const [loading] = useState(false);
 
   const login = (userData) => {
     const normalizedUser = normalizeAuthUser(userData);

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { feedbackApi } from '../../api/feedbackApi';
 import Navbar from '../../components/Navbar/Navbar';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
@@ -275,19 +275,25 @@ export default function MyFeedbacks() {
   const [editError, setEditError] = useState('');
   const [editSuccess, setEditSuccess] = useState('');
 
-  useEffect(() => {
-    fetchFeedbacks();
-  }, []);
+  const fetchFeedbacks = useCallback(async () => {
+    if (!user?.userId) {
+      setLoading(false);
+      return;
+    }
 
-  const fetchFeedbacks = async () => {
     try {
       const res = await feedbackApi.getMy(user.userId);
       setFeedbacks(res.data.feedbacks || []);
-    } catch (err) {
-      console.error('Failed to fetch feedbacks');
+    } catch (error) {
+      console.error('Failed to fetch feedbacks', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [user?.userId]);
+
+  useEffect(() => {
+    fetchFeedbacks();
+  }, [fetchFeedbacks]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -366,7 +372,8 @@ export default function MyFeedbacks() {
     try {
       await feedbackApi.delete(id);
       fetchFeedbacks();
-    } catch (err) {
+    } catch (error) {
+      console.error('Failed to delete feedback', error);
       alert('Failed to delete feedback');
     }
     setSubmitting(false);

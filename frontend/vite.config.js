@@ -8,14 +8,16 @@ export default defineConfig({
     // duplicate copies under the repo root and frontend package folders.
     dedupe: ['react', 'react-dom'],
   },
-  esbuild: {
-    loader: 'jsx',
+  oxc: {
     include: /src\/.*\.[jt]sx?$/,
     exclude: [],
+    jsx: {
+      runtime: 'automatic',
+    },
   },
   optimizeDeps: {
-    esbuildOptions: {
-      loader: {
+    rolldownOptions: {
+      moduleTypes: {
         '.js': 'jsx',
       },
     },

@@ -19,6 +19,11 @@ const Navbar = () => {
   const isStudentArea =
     userRole === 'student' && ['/', '/home', '/my-feedbacks', '/my-inquiries', '/profile'].includes(location.pathname);
 
+  const closeMenus = () => {
+    setIsAuthMenuOpen(false);
+    setIsMobileMenuOpen(false);
+  };
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
@@ -40,8 +45,11 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
-    setIsAuthMenuOpen(false);
-    setIsMobileMenuOpen(false);
+    const timeoutId = window.setTimeout(() => {
+      closeMenus();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [location.pathname, location.hash]);
 
   const publicNavLinks = [
@@ -60,11 +68,6 @@ const Navbar = () => {
 
   const isActive = (path) => {
     return location.pathname === path;
-  };
-
-  const closeMenus = () => {
-    setIsAuthMenuOpen(false);
-    setIsMobileMenuOpen(false);
   };
 
   const handleUserLogin = () => {

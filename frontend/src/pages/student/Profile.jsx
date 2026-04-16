@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authApi } from '../../api/authApi';
@@ -247,11 +247,7 @@ export default function Profile() {
   
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  useEffect(() => {
-    fetchUserData();
-  }, [user?.userId]);
-
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     if (!user?.userId) {
       setLoading(false);
       return;
@@ -265,14 +261,20 @@ export default function Profile() {
           mobile: res.data.user.mobile || '',
         });
       }
-    } catch (err) {
+    } catch (error) {
       setFormData({
         name: user.email?.split('@')[0] || '',
         mobile: '',
       });
+      console.error('Failed to fetch user data', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [user?.userId, user?.email]);
+
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -318,7 +320,8 @@ export default function Profile() {
       logout();
       localStorage.removeItem('user');
       navigate('/login');
-    } catch (err) {
+    } catch (error) {
+      console.error('Failed to delete account', error);
       alert('Failed to delete account');
       setSubmitting(false);
     }

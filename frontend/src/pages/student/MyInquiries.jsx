@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { inquiryApi } from '../../api/inquiryApi';
@@ -260,19 +260,25 @@ export default function MyInquiries() {
   const [editError, setEditError] = useState('');
   const [editSuccess, setEditSuccess] = useState('');
 
-  useEffect(() => {
-    fetchInquiries();
-  }, []);
+  const fetchInquiries = useCallback(async () => {
+    if (!user?.userId) {
+      setLoading(false);
+      return;
+    }
 
-  const fetchInquiries = async () => {
     try {
       const res = await inquiryApi.getMy(user.userId);
       setInquiries(res.data.inquiries || []);
-    } catch (err) {
-      console.error('Failed to fetch inquiries');
+    } catch (error) {
+      console.error('Failed to fetch inquiries', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [user?.userId]);
+
+  useEffect(() => {
+    fetchInquiries();
+  }, [fetchInquiries]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -352,7 +358,8 @@ export default function MyInquiries() {
     try {
       await inquiryApi.delete(id);
       fetchInquiries();
-    } catch (err) {
+    } catch (error) {
+      console.error('Failed to delete inquiry', error);
       alert('Failed to delete inquiry');
     }
     setSubmitting(false);

@@ -1,6 +1,6 @@
 const SocietyRequest = require("../models/societyRequest");
 const Society = require("../models/society");
-const Event = require("../models/event");
+const Event = require("../models/Event");
 
 const verifyEventToken = async (req, res) => {
   try {
