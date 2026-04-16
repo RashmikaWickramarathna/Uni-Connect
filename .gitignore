@@ -59,3 +59,9 @@ public/uploads/
 # -------- Misc --------
 *.tmp
 *.temp
+
+# -------- Local Browser Debug Artifacts --------
+.chrome-cdp/
+.chrome-headless/
+.edge-headless/
+chrome-localhost-*.png
