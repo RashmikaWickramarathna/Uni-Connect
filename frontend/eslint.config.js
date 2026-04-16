@@ -23,7 +23,19 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': [
+        'error',
+        {
+          varsIgnorePattern: '^[A-Z_]',
+          argsIgnorePattern: '^[A-Z_]',
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/components/auth/AuthPageLayout.jsx', 'src/context/AuthContext.jsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   },
 ])

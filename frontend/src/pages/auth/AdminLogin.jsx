@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiLock, FiUser } from 'react-icons/fi';
+import { FiLock, FiMail, FiShield } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
 import {
@@ -17,40 +17,52 @@ import {
   AuthPrimaryButton,
   AuthUtilityLink,
 } from '../../components/auth/AuthPageLayout';
+import { useAuth } from '../../context/AuthContext';
 
 const featurePoints = [
-  'Access your society workspace with a cleaner, focused sign-in experience',
-  'Review event, member, and request activity from one society dashboard',
-  'Move back to the main Uni-Connect login flow any time you need student access',
+  'Access the admin dashboard from a dedicated login path',
+  'Manage feedbacks and inquiries from one protected control panel',
+  'Return to the normal user login flow any time from this screen',
 ];
 
-export default function SocialLogin() {
-  const [username, setUsername] = useState('');
+export default function AdminLogin() {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
-      navigate('/social-dashboard');
-    }, 500);
+    if (email === 'admin@admin.com' && password === 'admin123') {
+      login({
+        email: 'admin@admin.com',
+        userId: 'admin',
+        role: 'admin',
+      });
+      navigate('/admin');
+      setLoading(false);
+      return;
+    }
+
+    setError('Invalid admin credentials. Use the configured admin login details.');
+    setLoading(false);
   };
 
   return (
     <AuthPageLayout
-      brandTag="Society Workspace Access"
-      showcaseTitle="Society"
+      brandTag="Administrator Access"
+      showcaseTitle="Admin"
       showcaseAccent="Login"
-      showcaseText="Use the same polished sign-in experience to enter the society side of Uni-Connect and continue into the social dashboard flow."
+      showcaseText="Use the same updated auth design to sign into the Uni-Connect admin area and continue directly into the management dashboard."
       featurePoints={featurePoints}
-      formTag="Society Login"
-      formTitle="Welcome Back"
-      formSubtitle="Enter your society username and password to continue. This keeps the same style and flow as the main user login page."
+      formTag="Admin Login"
+      formTitle="Admin Login"
+      formSubtitle="Enter the administrator credentials to continue into the protected admin dashboard."
       footer={
         <>
           <AuthDivider />
@@ -58,8 +70,7 @@ export default function SocialLogin() {
             <AuthUtilityLink to="/login">Back to User Login</AuthUtilityLink>
           </AuthLinkRow>
           <AuthHelperNote>
-            This screen now uses the same updated blue auth styling as the user login page while preserving the
-            existing society dashboard redirect behavior.
+            This admin screen uses the same shared background and blue auth styling as the other sign-in pages.
           </AuthHelperNote>
         </>
       }
@@ -68,17 +79,17 @@ export default function SocialLogin() {
 
       <AuthForm onSubmit={handleSubmit}>
         <AuthInputBlock>
-          <AuthLabel htmlFor="username">Username</AuthLabel>
+          <AuthLabel htmlFor="email">Email</AuthLabel>
           <AuthInputFrame>
             <AuthInputIcon>
-              <FiUser />
+              <FiMail />
             </AuthInputIcon>
             <AuthInput
-              id="username"
-              type="text"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="email"
+              type="email"
+              placeholder="Enter admin email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </AuthInputFrame>
@@ -93,7 +104,7 @@ export default function SocialLogin() {
             <AuthInput
               id="password"
               type="password"
-              placeholder="Enter your password"
+              placeholder="Enter admin password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -102,7 +113,8 @@ export default function SocialLogin() {
         </AuthInputBlock>
 
         <AuthPrimaryButton type="submit" fullWidth disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
+          <FiShield style={{ marginRight: '0.5rem' }} />
+          {loading ? 'Logging in...' : 'Login as Admin'}
         </AuthPrimaryButton>
       </AuthForm>
     </AuthPageLayout>

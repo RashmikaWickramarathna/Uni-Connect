@@ -1,11 +1,28 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+
+import { normalizeAuthRole, useAuth } from '../../context/AuthContext';
 import './Navbar.css';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAuthMenuOpen, setIsAuthMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const authMenuRef = useRef(null);
+  const userRole = normalizeAuthRole(user?.role);
+  const isLoggedIn = Boolean(user);
+  const dashboardPath = userRole === 'admin' ? '/admin' : '/';
+  const userLabel = user?.name || user?.email?.split('@')[0] || (userRole === 'admin' ? 'Admin' : 'Student');
+  const isStudentArea =
+    userRole === 'student' && ['/', '/home', '/my-feedbacks', '/my-inquiries', '/profile'].includes(location.pathname);
+
+  const closeMenus = () => {
+    setIsAuthMenuOpen(false);
+    setIsMobileMenuOpen(false);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -16,18 +33,67 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navLinks = [
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (authMenuRef.current && !authMenuRef.current.contains(event.target)) {
+        setIsAuthMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      closeMenus();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [location.pathname, location.hash]);
+
+  const publicNavLinks = [
     { path: '/', label: 'Home' },
-    { path: '/#features', label: 'Features' },
-    { path: '/#stats', label: 'Stats' },
     { path: '/submit', label: 'Register Society' },
   ];
 
+  const studentNavLinks = [
+    { path: '/', label: 'Home' },
+    { path: '/my-feedbacks', label: 'My Feedbacks' },
+    { path: '/my-inquiries', label: 'My Inquiries' },
+    { path: '/profile', label: 'My Profile' },
+  ];
+
+  const navLinks = isStudentArea ? studentNavLinks : publicNavLinks;
+
   const isActive = (path) => {
-    if (path.startsWith('/#')) {
-      return location.hash === path.substring(1);
-    }
     return location.pathname === path;
+  };
+
+  const handleUserLogin = () => {
+    closeMenus();
+    navigate('/login');
+  };
+
+  const handleSocietyLogin = () => {
+    closeMenus();
+    navigate('/social-login');
+  };
+
+  const handleAdminLogin = () => {
+    closeMenus();
+    navigate('/admin-login');
+  };
+
+  const handleDashboard = () => {
+    closeMenus();
+    navigate(dashboardPath);
+  };
+
+  const handleLogout = () => {
+    logout();
+    closeMenus();
+    navigate('/');
   };
 
   return (
@@ -72,20 +138,61 @@ const Navbar = () => {
               </Link>
             </li>
           ))}
-          <li>
-            <Link to="/society-admin/requests" className="btn-admin">
-              Admin
-            </Link>
-          </li>
+          {!isStudentArea && (
+            <li>
+              <Link to="/society-admin/requests" className="btn-admin" onClick={closeMenus}>
+                Admin
+              </Link>
+            </li>
+          )}
           <li className="auth-buttons">
-            <div className="auth-dropdown">
-              <button className="btn-login" aria-haspopup="true" aria-expanded="false">Log In</button>
-              <div className="dropdown-menu" role="menu">
-                <button className="btn-auth-option btn-society-login" role="menuitem">Society Login</button>
-                <button className="btn-auth-option btn-user-login" role="menuitem">User Login</button>
+            {isLoggedIn ? (
+              <>
+                <span className="auth-user-pill">
+                  {userRole === 'admin' ? 'Admin' : 'User'}: {userLabel}
+                </span>
+                <button className="btn-login btn-dashboard" onClick={handleDashboard}>
+                  {userRole === 'admin' ? 'Admin Dashboard' : 'Dashboard'}
+                </button>
+                <button className="btn-logout" onClick={handleLogout}>
+                  Log Out
+                </button>
+              </>
+            ) : (
+              <div className="auth-dropdown" ref={authMenuRef}>
+                <button
+                  className="btn-login"
+                  aria-haspopup="true"
+                  aria-expanded={isAuthMenuOpen}
+                  onClick={() => setIsAuthMenuOpen((current) => !current)}
+                >
+                  Log In
+                </button>
+                <div className={`dropdown-menu ${isAuthMenuOpen ? 'open' : ''}`} role="menu">
+                  <button
+                    className="btn-auth-option btn-admin-login"
+                    role="menuitem"
+                    onClick={handleAdminLogin}
+                  >
+                    Admin Login
+                  </button>
+                  <button
+                    className="btn-auth-option btn-society-login"
+                    role="menuitem"
+                    onClick={handleSocietyLogin}
+                  >
+                    Society Login
+                  </button>
+                  <button
+                    className="btn-auth-option btn-user-login"
+                    role="menuitem"
+                    onClick={handleUserLogin}
+                  >
+                    User Login
+                  </button>
+                </div>
               </div>
-            </div>
-            <button className="btn-logout">Log Out</button>
+            )}
           </li>
         </ul>
       </div>

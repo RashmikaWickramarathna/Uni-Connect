@@ -1,93 +1,30 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Label } from '../../components/ui/Label';
+import { FiLock, FiMail } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+
+import {
+  AuthAlert,
+  AuthDivider,
+  AuthForm,
+  AuthHelperNote,
+  AuthInput,
+  AuthInputBlock,
+  AuthInputFrame,
+  AuthInputIcon,
+  AuthLabel,
+  AuthLinkRow,
+  AuthPageLayout,
+  AuthPrimaryButton,
+  AuthUtilityLink,
+} from '../../components/auth/AuthPageLayout';
 import { authApi } from '../../api/authApi';
 import { useAuth } from '../../context/AuthContext';
-import styled from 'styled-components';
 
-const PageWrapper = styled.div`
-  min-height: 100vh;
-  width : 100vw;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=2370&auto=format&fit=crop');
-  background-size: cover;
-  background-position: center;
-  padding: 2rem;
-`;
-
-const Form = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-`;
-
-const Alert = styled.div`
-  padding: 0.75rem;
-  font-size: 0.875rem;
-  border-radius: 0.375rem;
-  ${props => props.$variant === 'error' ? `
-    color: var(--destructive);
-    background-color: rgba(220, 38, 38, 0.1);
-  ` : `
-    color: #16a34a;
-    background-color: #dcfce7;
-  `}
-`;
-
-const FooterLink = styled.p`
-  font-size: 0.875rem;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.7);
-`;
-
-const StyledLink = styled.span`
-  color: #60a5fa;
-  cursor: pointer;
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
-const UniTitle = styled.h1`
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: black;
-  text-align: center;
-  margin-bottom: 0.5rem;
-`;
-
-const UniSubtitle = styled.p`
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
-  text-align: center;
-  margin-bottom: 1.5rem;
-`;
-
-const StyledCard = styled(Card)`
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-`;
-
-const StyledInput = styled(Input)``;
-
-const StyledLabel = styled(Label)`
-  color: var(--foreground);
-`;
-
-const InputRow = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
-  }
-`;
+const featurePoints = [
+  'Manage student feedback and inquiries from one secure account',
+  'Move between dashboard tools without repeated login prompts',
+  'Stay connected with Uni-Connect events, societies, and profile updates',
+];
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -102,89 +39,98 @@ export default function Login() {
     setError('');
     setLoading(true);
 
-    if (email === 'admin@admin.com' && password === 'admin123') {
-      login({ email: 'admin@admin.com', role: 'admin', userId: 'admin' });
-      navigate('/admin');
-      setLoading(false);
-      return;
-    }
-
     try {
       const res = await authApi.login({ email, password });
       if (res.data.user) {
-        login({
+        const studentUser = {
+          ...res.data.user,
           email: res.data.user?.email || email,
-          userId: res.data.user?.id,
-          role: 'student',
-        });
-        navigate('/home');
+          userId: res.data.user?.id || res.data.user?._id || res.data.user?.userId,
+          role: res.data.user?.role || 'student',
+        };
+
+        if (!studentUser.userId) {
+          setError('Login succeeded, but the user record returned by the server is missing an id.');
+          setLoading(false);
+          return;
+        }
+
+        login(studentUser);
+        navigate('/');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     }
+
     setLoading(false);
   };
 
   return (
-    <PageWrapper>
-      <StyledCard style={{ width: '100%', maxWidth: '35rem', animation: 'slideUp 0.3s ease' }}>
-        <CardHeader style={{ textAlign: 'center' }}>
-          <UniTitle>University Portal</UniTitle>
-          <UniSubtitle>Student & Staff Management System</UniSubtitle>
-          <CardTitle style={{ fontSize: '1.25rem', color: 'var(--foreground)' }}>Welcome Back</CardTitle>
-          <CardDescription>Enter your credentials to login</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form onSubmit={handleSubmit}>
-            {error && <Alert $variant="error">{error}</Alert>}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <StyledLabel htmlFor="email">Email</StyledLabel>
-              <StyledInput
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <StyledLabel htmlFor="password">Password</StyledLabel>
-              <StyledInput
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" fullWidth disabled={loading}>
-              {loading ? 'Logging in...' : 'Login'}
-            </Button>
-          </Form>
-        </CardContent>
-   <div style={{widht:600,height:40, alignContent:"center",justifyContent:"space-between",alignItems:"center"}}>
-         <CardFooter style={{ display: 'flex', flexDirection: 'column', gap: '10px',justifyContent:'space-between',alignItems:'center' }}>
-         
-          <FooterLink>
-            <Link to="/social-login"><StyledLink>Social Login</StyledLink></Link>
-          </FooterLink>
-          <div style={{width:40}}/>
-          <FooterLink>
-            <Link to="/forgot-password"><StyledLink>Forgot password?</StyledLink></Link>
-          </FooterLink>
-        </CardFooter>
-   </div>
-      <div style={{widht:600,height:40}}>
-         <CardFooter style={{ display: 'flex', flexDirection: 'column', gap: '10px',justifyContent:'space-between',alignItems:'center' }}>
-         
-          <FooterLink>
-            <Link to="/forgot-password"><StyledLink>Forgot password?</StyledLink></Link>
-          </FooterLink>
-        </CardFooter>
-   </div>
-      </StyledCard>
-    </PageWrapper>
+    <AuthPageLayout
+      brandTag="Secure University Access"
+      showcaseTitle="Connect with"
+      showcaseAccent="UniConnect"
+      showcaseText="Sign in once and move straight into your student dashboard, feedback tools, inquiry history, and profile management without repeated login interruptions."
+      featurePoints={featurePoints}
+      formTag="Student Login"
+      formTitle="Welcome Back"
+      formSubtitle="Enter your student account details to continue into Uni-Connect."
+      footer={
+        <>
+          <AuthDivider />
+          <AuthLinkRow>
+            <AuthUtilityLink to="/admin-login">Admin Login</AuthUtilityLink>
+            <AuthUtilityLink to="/social-login">Society Login</AuthUtilityLink>
+            <AuthUtilityLink to="/forgot-password">Forgot password?</AuthUtilityLink>
+          </AuthLinkRow>
+          <AuthHelperNote>
+            Use your registered student email and password here. Once signed in, the protected pages will open
+            directly without asking you to log in again.
+          </AuthHelperNote>
+        </>
+      }
+    >
+      {error && <AuthAlert $variant="error">{error}</AuthAlert>}
+
+      <AuthForm onSubmit={handleSubmit}>
+        <AuthInputBlock>
+          <AuthLabel htmlFor="email">Email</AuthLabel>
+          <AuthInputFrame>
+            <AuthInputIcon>
+              <FiMail />
+            </AuthInputIcon>
+            <AuthInput
+              id="email"
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </AuthInputFrame>
+        </AuthInputBlock>
+
+        <AuthInputBlock>
+          <AuthLabel htmlFor="password">Password</AuthLabel>
+          <AuthInputFrame>
+            <AuthInputIcon>
+              <FiLock />
+            </AuthInputIcon>
+            <AuthInput
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </AuthInputFrame>
+        </AuthInputBlock>
+
+        <AuthPrimaryButton type="submit" fullWidth disabled={loading}>
+          {loading ? 'Logging in...' : 'Login'}
+        </AuthPrimaryButton>
+      </AuthForm>
+    </AuthPageLayout>
   );
 }

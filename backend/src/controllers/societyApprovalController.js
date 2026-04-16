@@ -1,96 +1,77 @@
 const crypto = require("crypto");
+
 const ApprovalToken = require("../models/approvalToken");
-const SocietyRequest = require("../models/SocietyRequest");
+const Society = require("../models/society");
+const SocietyRequest = require("../models/societyRequest");
 const { sendApprovalEmail, sendEventAccessEmail } = require("../utils/emailService");
 
-// Note: manual token creation route removed to enforce single automatic approval flow.
-
-// Verify token
 const verifyApprovalToken = async (req, res) => {
   try {
     const { token } = req.params;
-
     const approvalToken = await ApprovalToken.findOne({ token });
 
     if (!approvalToken) {
-      return res.status(404).json({
-        message: "Invalid token"
-      });
+      return res.status(404).json({ message: "Invalid token" });
     }
 
     if (approvalToken.isUsed) {
-      return res.status(400).json({
-        message: "Token already used"
-      });
+      return res.status(400).json({ message: "Token already used" });
     }
 
     if (approvalToken.expiresAt < new Date()) {
-      return res.status(400).json({
-        message: "Token expired"
-      });
+      return res.status(400).json({ message: "Token expired" });
     }
 
-    const societyRequest = await SocietyRequest.findById(
-      approvalToken.societyRequestId
-    );
+    const societyRequest = await SocietyRequest.findById(approvalToken.societyRequestId);
 
     return res.status(200).json({
       message: "Token is valid",
       valid: true,
       officialEmail: approvalToken.officialEmail,
       societyRequestId: approvalToken.societyRequestId,
-      societyRequest
+      societyRequest,
     });
   } catch (error) {
     console.error("VERIFY APPROVAL TOKEN ERROR:", error);
     return res.status(500).json({
       message: "Failed to verify token",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// Mark token as used
 const useApprovalToken = async (req, res) => {
   try {
     const { token } = req.params;
-
     const approvalToken = await ApprovalToken.findOne({ token });
 
     if (!approvalToken) {
-      return res.status(404).json({
-        message: "Invalid token"
-      });
+      return res.status(404).json({ message: "Invalid token" });
     }
 
     if (approvalToken.isUsed) {
-      return res.status(400).json({
-        message: "Token already used"
-      });
+      return res.status(400).json({ message: "Token already used" });
     }
 
     if (approvalToken.expiresAt < new Date()) {
-      return res.status(400).json({
-        message: "Token expired"
-      });
+      return res.status(400).json({ message: "Token expired" });
     }
 
     approvalToken.isUsed = true;
     await approvalToken.save();
 
     return res.status(200).json({
-      message: "Token marked as used successfully"
+      message: "Token marked as used successfully",
     });
   } catch (error) {
     console.error("USE APPROVAL TOKEN ERROR:", error);
     return res.status(500).json({
       message: "Failed to mark token as used",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// Approve society and auto-send email
 const approveSociety = async (req, res) => {
   try {
     const society = await SocietyRequest.findById(req.params.id);
@@ -101,7 +82,7 @@ const approveSociety = async (req, res) => {
 
     if (society.status === "Rejected") {
       return res.status(400).json({
-        message: "Cannot approve rejected society"
+        message: "Cannot approve rejected society",
       });
     }
 
@@ -111,30 +92,26 @@ const approveSociety = async (req, res) => {
       society.contactEmail;
 
     if (!officialEmail) {
-      return res.status(400).json({
-        message: "Official email not found"
-      });
+      return res.status(400).json({ message: "Official email not found" });
     }
 
     await ApprovalToken.deleteMany({
       societyRequestId: society._id,
-      isUsed: false
+      isUsed: false,
     });
 
     const token = crypto.randomBytes(32).toString("hex");
-
     const approvalToken = new ApprovalToken({
       societyRequestId: society._id,
       officialEmail,
       token,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      isUsed: false
+      isUsed: false,
     });
 
     await approvalToken.save();
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    // Link should point to the frontend registration route
     const link = `${frontendUrl}/society-register/${token}`;
 
     society.status = "Approved";
@@ -143,7 +120,6 @@ const approveSociety = async (req, res) => {
 
     await society.save();
 
-    // Attempt to send email but do not fail the approval if email sending fails.
     try {
       await sendApprovalEmail(
         officialEmail,
@@ -153,26 +129,25 @@ const approveSociety = async (req, res) => {
 
       return res.json({
         message: "Society approved and email sent successfully",
-        approvalLink: link
+        approvalLink: link,
       });
-    } catch (emailErr) {
-      console.error("APPROVAL EMAIL FAILED:", emailErr);
+    } catch (emailError) {
+      console.error("APPROVAL EMAIL FAILED:", emailError);
       return res.status(200).json({
         message: "Society approved. Email notification pending.",
         approvalLink: link,
-        emailError: emailErr.message
+        emailError: emailError.message,
       });
     }
-  } catch (err) {
-    console.error("APPROVE SOCIETY ERROR:", err);
+  } catch (error) {
+    console.error("APPROVE SOCIETY ERROR:", error);
     return res.status(500).json({
       message: "Server error",
-      error: err.message
+      error: error.message,
     });
   }
 };
 
-// Reject society
 const rejectSociety = async (req, res) => {
   try {
     const society = await SocietyRequest.findById(req.params.id);
@@ -187,30 +162,26 @@ const rejectSociety = async (req, res) => {
 
     await ApprovalToken.deleteMany({
       societyRequestId: society._id,
-      isUsed: false
+      isUsed: false,
     });
 
     await society.save();
 
     return res.json({
-      message: "Society rejected successfully"
+      message: "Society rejected successfully",
     });
-  } catch (err) {
-    console.error("REJECT SOCIETY ERROR:", err);
+  } catch (error) {
+    console.error("REJECT SOCIETY ERROR:", error);
     return res.status(500).json({
       message: "Server error",
-      error: err.message
+      error: error.message,
     });
   }
 };
 
-// Export handlers (placed after all declarations)
-
-// Open link handler: verifies token and redirects to frontend registration page
 const openApprovalLink = async (req, res) => {
   try {
     const { token } = req.params;
-
     const approvalToken = await ApprovalToken.findOne({ token });
 
     if (!approvalToken) {
@@ -228,7 +199,6 @@ const openApprovalLink = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const redirectUrl = `${frontendUrl}/society-register/${token}`;
 
-    // Redirect user to frontend registration page with token
     return res.redirect(302, redirectUrl);
   } catch (error) {
     console.error("OPEN APPROVAL LINK ERROR:", error);
@@ -236,17 +206,77 @@ const openApprovalLink = async (req, res) => {
   }
 };
 
-
 const sendEventLink = async (req, res) => {
   try {
-    // your logic here
-    res.status(200).json({ message: "Event link sent successfully" });
+    const request = await SocietyRequest.findById(req.params.id);
+
+    if (!request) {
+      return res.status(404).json({ message: "Society request not found" });
+    }
+
+    if (!["Approved", "Registered"].includes(request.status)) {
+      return res.status(400).json({
+        message: "Event links can only be sent for approved or registered societies",
+      });
+    }
+
+    const officialEmail =
+      request.officialEmail ||
+      request.email ||
+      request.contactEmail;
+
+    if (!officialEmail) {
+      return res.status(400).json({ message: "Official email not found" });
+    }
+
+    const token = request.eventAccessToken || crypto.randomBytes(32).toString("hex");
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const eventLink = `${frontendUrl}/create-event/${token}`;
+    const adminName = req.body?.adminName || "Admin";
+
+    request.eventAccessToken = token;
+    request.eventAccessLink = eventLink;
+    request.eventAccessExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    request.eventAccessSentBy = adminName;
+    request.eventAccessSentAt = new Date();
+    await request.save();
+
+    const society = await Society.findOne({ officialEmail });
+    if (society) {
+      society.eventAccessToken = token;
+      society.eventAccessLink = eventLink;
+      await society.save();
+    }
+
+    try {
+      await sendEventAccessEmail(
+        officialEmail,
+        request.societyName || "Society",
+        eventLink,
+        adminName
+      );
+
+      return res.status(200).json({
+        message: "Event link sent successfully",
+        eventAccessLink: eventLink,
+        eventAccessSentAt: request.eventAccessSentAt,
+        eventAccessSentBy: request.eventAccessSentBy,
+      });
+    } catch (emailError) {
+      console.error("EVENT ACCESS EMAIL FAILED:", emailError);
+      return res.status(200).json({
+        message: "Event link created. Email notification pending.",
+        eventAccessLink: eventLink,
+        eventAccessSentAt: request.eventAccessSentAt,
+        eventAccessSentBy: request.eventAccessSentBy,
+        emailError: emailError.message,
+      });
+    }
   } catch (error) {
     console.error("Error sending event link:", error);
-    res.status(500).json({ message: "Failed to send event link" });
+    return res.status(500).json({ message: "Failed to send event link" });
   }
 };
-
 
 module.exports = {
   verifyApprovalToken,
@@ -254,6 +284,5 @@ module.exports = {
   approveSociety,
   rejectSociety,
   openApprovalLink,
-  sendEventLink
+  sendEventLink,
 };
-

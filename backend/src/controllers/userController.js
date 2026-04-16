@@ -1,4 +1,4 @@
-const User = require("../Model/UserModel");
+const User = require("../models/user");
 const { generateOTP, sendOTP } = require("../utils/otpUtils");
 
 // Create new user (Sign Up)

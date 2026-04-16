@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { inquiryApi } from '../../api/inquiryApi';
+import Navbar from '../../components/Navbar/Navbar';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -10,96 +11,85 @@ import { Textarea } from '../../components/ui/Label';
 import styled from 'styled-components';
 
 const PageWrapper = styled.div`
+  position: relative;
   min-height: 100vh;
-  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1492538368677-f6e0afe31dcc?q=80&w=2370&auto=format&fit=crop');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-`;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(251, 191, 36, 0.14), transparent 26%),
+    linear-gradient(180deg, #f8fbff 0%, #ffffff 45%, #f8fbff 100%);
 
-const Header = styled.header`
-  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-  color: white;
-  padding: 1rem 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-`;
+  &::before {
+    content: '';
+    position: fixed;
+    top: 6rem;
+    right: -9rem;
+    width: 24rem;
+    height: 24rem;
+    border-radius: 50%;
+    background: rgba(37, 99, 235, 0.08);
+    filter: blur(12px);
+    pointer-events: none;
+  }
 
-const HeaderContent = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-`;
-
-const Logo = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: black;
-`;
-
-const LogoIcon = styled.span`
-  width: 2.5rem;
-  height: 2.5rem;
-  background: white;
-  border-radius: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #2563eb;
-  font-weight: bold;
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-`;
-
-const UserBadge = styled.div`
-  background: rgba(255, 255, 255, 0.2);
-  padding: 0.5rem 1rem;
-  border-radius: 2rem;
-  font-size: 0.875rem;
+  &::after {
+    content: '';
+    position: fixed;
+    left: -8rem;
+    bottom: 2rem;
+    width: 22rem;
+    height: 22rem;
+    border-radius: 50%;
+    background: rgba(251, 191, 36, 0.08);
+    filter: blur(14px);
+    pointer-events: none;
+  }
 `;
 
 const Main = styled.main`
-  padding: 2rem;
+  position: relative;
+  z-index: 1;
+  padding: 7.5rem 2rem 3rem;
   max-width: 1200px;
   margin: 0 auto;
 `;
 
 const PageTitle = styled.h2`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: white;
+  font-size: clamp(1.8rem, 2.8vw, 2.3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #1f2937;
   margin-bottom: 1.5rem;
 `;
 
 const BackButton = styled.button`
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(147, 197, 253, 0.7);
+  color: #2563eb;
+  padding: 0.7rem 1.1rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 600;
   cursor: pointer;
   margin-bottom: 1rem;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.1);
   }
 `;
 
 const Section = styled.div`
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(10px);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  border: 1px solid rgba(209, 213, 219, 0.72);
+  border-radius: 1.35rem;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  padding: 1.75rem;
+  margin-bottom: 1.75rem;
 `;
 
 const SectionTitle = styled.h3`
@@ -131,8 +121,8 @@ const Alert = styled.div`
 const StyledInput = styled(Input)`
   &:focus {
     outline: none;
-    border-color: #ec4899;
-    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2);
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
   }
 `;
 
@@ -143,9 +133,10 @@ const InquiryList = styled.div`
 `;
 
 const InquiryCard = styled(Card)`
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(209, 213, 219, 0.72);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
 `;
 
 const InquiryHeader = styled.div`
@@ -248,7 +239,7 @@ const Spinner = styled.div`
 `;
 
 export default function MyInquiries() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -269,19 +260,25 @@ export default function MyInquiries() {
   const [editError, setEditError] = useState('');
   const [editSuccess, setEditSuccess] = useState('');
 
-  useEffect(() => {
-    fetchInquiries();
-  }, []);
+  const fetchInquiries = useCallback(async () => {
+    if (!user?.userId) {
+      setLoading(false);
+      return;
+    }
 
-  const fetchInquiries = async () => {
     try {
       const res = await inquiryApi.getMy(user.userId);
       setInquiries(res.data.inquiries || []);
-    } catch (err) {
-      console.error('Failed to fetch inquiries');
+    } catch (error) {
+      console.error('Failed to fetch inquiries', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [user?.userId]);
+
+  useEffect(() => {
+    fetchInquiries();
+  }, [fetchInquiries]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -361,7 +358,8 @@ export default function MyInquiries() {
     try {
       await inquiryApi.delete(id);
       fetchInquiries();
-    } catch (err) {
+    } catch (error) {
+      console.error('Failed to delete inquiry', error);
       alert('Failed to delete inquiry');
     }
     setSubmitting(false);
@@ -369,23 +367,7 @@ export default function MyInquiries() {
 
   return (
     <PageWrapper>
-      <Header>
-        <HeaderContent>
-          <Logo>
-            <LogoIcon>U</LogoIcon>
-            University Portal
-          </Logo>
-          <HeaderRight>
-            <UserBadge>Student: {user?.email?.split('@')[0]}</UserBadge>
-            <Button variant="secondary" size="sm" onClick={() => navigate('/home')}>
-              Dashboard
-            </Button>
-            <Button variant="secondary" size="sm" onClick={logout}>
-              Logout
-            </Button>
-          </HeaderRight>
-        </HeaderContent>
-      </Header>
+      <Navbar />
 
       <Main>
         <BackButton onClick={() => navigate('/home')}>← Back to Dashboard</BackButton>

@@ -132,6 +132,21 @@
   align-items: center;
 }
 
+.auth-user-pill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 220px;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: rgba(13, 110, 253, 0.1);
+  color: #0d6efd;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .btn-login {
   background: transparent;
   color: #0d6efd;
@@ -149,6 +164,16 @@
   color: white;
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+}
+
+.btn-dashboard {
+  background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+  border-color: transparent;
+  color: white;
+}
+
+.btn-dashboard:hover {
+  color: white;
 }
 
 .btn-logout {
@@ -188,7 +213,8 @@
   z-index: 1002;
 }
 .auth-dropdown:hover .dropdown-menu,
-.auth-dropdown:focus-within .dropdown-menu {
+.auth-dropdown:focus-within .dropdown-menu,
+.auth-dropdown .dropdown-menu.open {
   display: flex;
 }
 .btn-auth-option {
@@ -203,6 +229,11 @@
 }
 .btn-auth-option:hover {
   transform: translateY(-1px);
+}
+.btn-admin-login {
+  border: 1px solid #bfdbfe;
+  color: #0b5ed7;
+  background: #eff6ff;
 }
 .btn-society-login {
   background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
@@ -231,6 +262,11 @@
     border-radius: 25px;
     padding: 0.5rem 1rem;
     background: transparent;
+  }
+  .btn-admin-login {
+    background: #eff6ff;
+    border: 2px solid #bfdbfe;
+    color: #0b5ed7;
   }
   .btn-society-login {
     background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
@@ -333,6 +369,11 @@
     width: 100%;
     gap: 0.75rem;
     margin-top: 1rem;
+  }
+
+  .auth-user-pill {
+    max-width: 100%;
+    justify-content: center;
   }
 
   .btn-login,

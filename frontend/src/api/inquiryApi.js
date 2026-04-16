@@ -1,4 +1,4 @@
-import api from './axios';
+import api from "./apiClient";
 
 export const inquiryApi = {
   create: (data) => api.post('/inquiries', data),

@@ -1,8 +1,14 @@
+import { FiHelpCircle, FiMessageSquare, FiUser } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import './HeroSection.css';
 
 const HeroSection = () => {
   const navigate = useNavigate();
+  const studentToolButtons = [
+    { label: 'Feedbacks', icon: FiMessageSquare, path: '/my-feedbacks' },
+    { label: 'Inquiries', icon: FiHelpCircle, path: '/my-inquiries' },
+    { label: 'Profile', icon: FiUser, path: '/profile' },
+  ];
 
   return (
     <section className="hero-section">
@@ -50,6 +56,19 @@ const HeroSection = () => {
           >
             Explore Features
           </button>
+        </div>
+
+        <div className="hero-tool-buttons" aria-label="Student quick links">
+          {studentToolButtons.map(({ label, icon: Icon, path }) => (
+            <button
+              key={label}
+              className="hero-tool-button"
+              onClick={() => navigate(path)}
+            >
+              <Icon className="hero-tool-icon" />
+              {label}
+            </button>
+          ))}
         </div>
         
         <div className="hero-stats">
