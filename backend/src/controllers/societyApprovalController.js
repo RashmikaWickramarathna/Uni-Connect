@@ -5,6 +5,14 @@ const Society = require("../models/society");
 const SocietyRequest = require("../models/societyRequest");
 const { sendApprovalEmail, sendEventAccessEmail } = require("../utils/emailService");
 
+const getRegistrationFrontendUrl = () =>
+  (process.env.REGISTRATION_FRONTEND_URL ||
+    process.env.SOCIETY_FRONTEND_URL ||
+    "http://localhost:3002").replace(/\/$/, "");
+
+const buildRegistrationLink = (token) =>
+  `${getRegistrationFrontendUrl()}/?approvalToken=${encodeURIComponent(token)}`;
+
 const verifyApprovalToken = async (req, res) => {
   try {
     const { token } = req.params;
@@ -111,8 +119,7 @@ const approveSociety = async (req, res) => {
 
     await approvalToken.save();
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    const link = `${frontendUrl}/society-register/${token}`;
+    const link = buildRegistrationLink(token);
 
     society.status = "Approved";
     society.approvalToken = token;
@@ -196,8 +203,7 @@ const openApprovalLink = async (req, res) => {
       return res.status(400).send("Token expired");
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    const redirectUrl = `${frontendUrl}/society-register/${token}`;
+    const redirectUrl = buildRegistrationLink(token);
 
     return res.redirect(302, redirectUrl);
   } catch (error) {

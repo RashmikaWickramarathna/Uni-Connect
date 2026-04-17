@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ApprovalRegistration from './components/ApprovalRegistration';
 import EventForm from './components/EventForm';
 import EventCard from './components/EventCard';
 import EventCalendar from './components/EventCalendar';
@@ -11,7 +12,55 @@ const DEMO_USER = {
   email: 'cssociety@university.edu',
   role: 'society',
 };
+
+const getStoredUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user')) || DEMO_USER;
+  } catch {
+    return DEMO_USER;
+  }
+};
+
+const safeText = value => String(value ?? '');
+
+const normalizeStatus = status => {
+  const normalized = safeText(status).toLowerCase();
+  if (normalized === 'published') return 'approved';
+  if (normalized === 'draft') return 'pending';
+  return normalized || 'pending';
+};
+
+const normalizeEvent = event => ({
+  ...event,
+  title: safeText(event?.title).trim() || 'Untitled Event',
+  description: safeText(event?.description),
+  organizer: safeText(event?.organizer).trim() || 'Unknown Society',
+  organizerEmail: safeText(event?.organizerEmail).trim().toLowerCase(),
+  venue: safeText(event?.venue).trim() || 'TBA',
+  category: safeText(event?.category).trim() || 'Other',
+  date: safeText(event?.date),
+  time: safeText(event?.time),
+  status: normalizeStatus(event?.status),
+  maxParticipants: Number(event?.maxParticipants) > 0 ? Number(event.maxParticipants) : 100,
+  tags: Array.isArray(event?.tags) ? event.tags : [],
+  views: Number.isFinite(Number(event?.views)) ? Number(event.views) : 0,
+});
+
+const withOwnedEventFields = (formData, currentUser) => {
+  const next = new FormData();
+  for (const [key, value] of formData.entries()) {
+    next.append(key, value);
+  }
+  if (currentUser?.name) next.set('organizer', currentUser.name);
+  if (currentUser?.email) next.set('organizerEmail', currentUser.email);
+  return next;
+};
+
 export default function App() {
+  const [user, setUser] = useState(getStoredUser);
+  const [approvalToken, setApprovalToken] = useState(
+    () => new URLSearchParams(window.location.search).get('approvalToken')
+  );
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -21,37 +70,66 @@ export default function App() {
   const [postEvent, setPostEvent] = useState(null);
   const [search, setSearch] = useState('');
 
- const user =
-  JSON.parse(localStorage.getItem("user")) || DEMO_USER;
-
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
   };
 
-  const fetchEvents = async () => {
+  const clearApprovalToken = () => {
+    setApprovalToken(null);
+    window.history.replaceState({}, document.title, window.location.pathname);
+  };
+
+  const handleRegistrationComplete = (registeredSociety) => {
+    const nextUser = {
+      name: registeredSociety?.societyName || DEMO_USER.name,
+      email: registeredSociety?.officialEmail || DEMO_USER.email,
+      role: 'society',
+    };
+
+    localStorage.setItem('user', JSON.stringify(nextUser));
+    setUser(nextUser);
+    clearApprovalToken();
+    showToast(
+      registeredSociety?.message || 'Society account created successfully.'
+    );
+  };
+
+  const fetchEvents = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
-      const res = await getSocietyEvents(user.email);
-      setEvents(res.data);
+      const res = await getSocietyEvents(user.email, user.name);
+      setEvents((res.data || []).map(normalizeEvent));
     } catch {
       showToast('Failed to load events.', 'error');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
-  useEffect(() => { fetchEvents(); }, []);
+  useEffect(() => {
+    if (approvalToken) return undefined;
+
+    fetchEvents();
+
+    const handleFocus = () => {
+      fetchEvents(false);
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [approvalToken, user.email, user.name]);
 
   const handleCreate = async (formData) => {
-    const res = await createEvent(formData);
-    setEvents(p => [res.data, ...p]);
+    const res = await createEvent(withOwnedEventFields(formData, user));
+    setEvents(p => [normalizeEvent(res.data), ...p]);
     showToast('Event created! Waiting for admin approval.');
     setActiveTab('dashboard');
   };
 
   const handleUpdate = async (formData) => {
-    const res = await updateEvent(editData._id, formData);
-    setEvents(p => p.map(e => e._id === editData._id ? res.data : e));
+    const res = await updateEvent(editData._id, withOwnedEventFields(formData, user));
+    setEvents(p => p.map(e => e._id === editData._id ? normalizeEvent(res.data) : e));
     setEditData(null);
     showToast('Event updated successfully!');
     setActiveTab('dashboard');
@@ -78,10 +156,11 @@ export default function App() {
   // Filter and search
   let filtered = filter === 'all' ? events : events.filter(e => e.status === filter);
   if (search.trim()) {
+    const searchValue = search.toLowerCase();
     filtered = filtered.filter(e =>
-      e.title.toLowerCase().includes(search.toLowerCase()) ||
-      e.venue.toLowerCase().includes(search.toLowerCase()) ||
-      e.category.toLowerCase().includes(search.toLowerCase())
+      safeText(e.title).toLowerCase().includes(searchValue) ||
+      safeText(e.venue).toLowerCase().includes(searchValue) ||
+      safeText(e.category).toLowerCase().includes(searchValue)
     );
   }
 
@@ -105,6 +184,16 @@ export default function App() {
     const diff = Math.ceil((new Date(e.date+'T00:00:00') - today) / (1000*60*60*24));
     return diff >= 0 && diff <= 7;
   });
+
+  if (approvalToken) {
+    return (
+      <ApprovalRegistration
+        token={approvalToken}
+        onRegistered={handleRegistrationComplete}
+        onDismiss={clearApprovalToken}
+      />
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex' }}>
@@ -244,6 +333,7 @@ export default function App() {
             editData={editData}
             onCancelEdit={() => { setEditData(null); setActiveTab('dashboard'); }}
             bookedDates={bookedDates}
+            currentUser={user}
           />
         )}
 

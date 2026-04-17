@@ -6,6 +6,8 @@ const { verifyEventToken, createEvent } = require("../controllers/eventControlle
 const Event = require("../models/Event");
 const Notification = require("../models/Notification");
 const Reminder = require("../models/Reminder");
+const Society = require("../models/society");
+const SocietyRequest = require("../models/societyRequest");
 
 const router = express.Router();
 
@@ -47,6 +49,110 @@ const normalizeTags = (tags) => {
   }
 
   return [];
+};
+
+const toDateString = (value) => {
+  if (!value) return "";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  const year = parsedDate.getFullYear();
+  const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+  const day = String(parsedDate.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const normalizeStatus = (status) => {
+  const normalizedStatus = String(status || "pending").toLowerCase();
+  if (normalizedStatus === "published") return "approved";
+  if (normalizedStatus === "draft") return "pending";
+  return normalizedStatus;
+};
+
+const isPopulatedDoc = (value) =>
+  Boolean(value && typeof value === "object" && !Array.isArray(value) && value._id);
+
+const normalizeEventRecord = (event) => {
+  const linkedSociety = isPopulatedDoc(event?.societyId) ? event.societyId : null;
+  const linkedRequest = isPopulatedDoc(event?.societyRequestId) ? event.societyRequestId : null;
+  const organizer =
+    String(
+      event?.organizer ||
+        linkedSociety?.societyName ||
+        linkedRequest?.societyName ||
+        "Unknown Society"
+    ).trim() || "Unknown Society";
+  const organizerEmail = String(
+    event?.organizerEmail || linkedSociety?.officialEmail || linkedRequest?.officialEmail || ""
+  )
+    .trim()
+    .toLowerCase();
+  const maxParticipants = Number(event?.maxParticipants ?? event?.maxAttendees);
+
+  return {
+    ...event,
+    societyId: linkedSociety?._id || event?.societyId || null,
+    societyRequestId: linkedRequest?._id || event?.societyRequestId || null,
+    title: String(event?.title || "Untitled Event").trim() || "Untitled Event",
+    description: String(event?.description || "").trim(),
+    date: toDateString(event?.date || event?.eventDate),
+    time: String(event?.time || "").trim(),
+    venue: String(event?.venue || "TBA").trim() || "TBA",
+    category: String(event?.category || "Other").trim() || "Other",
+    organizer,
+    organizerEmail,
+    maxParticipants:
+      Number.isFinite(maxParticipants) && maxParticipants > 0 ? maxParticipants : 100,
+    status: normalizeStatus(event?.status),
+    image: event?.image || null,
+    tags: Array.isArray(event?.tags) ? event.tags.filter(Boolean) : [],
+    views: Number.isFinite(Number(event?.views)) ? Number(event.views) : 0,
+    adminReason: event?.adminReason || null,
+    adminActionAt: event?.adminActionAt || null,
+    reminderSent7Days: Boolean(event?.reminderSent7Days),
+    reminderSent1Day: Boolean(event?.reminderSent1Day),
+    createdAt: event?.createdAt || null,
+    updatedAt: event?.updatedAt || null,
+  };
+};
+
+const getNormalizedEventById = async (id) => {
+  const event = await Event.findById(id)
+    .populate("societyId", "societyName officialEmail")
+    .populate("societyRequestId", "societyName officialEmail")
+    .lean();
+
+  return event ? normalizeEventRecord(event) : null;
+};
+
+const buildSocietyEventQuery = async (email, organizerName) => {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const normalizedOrganizer = String(organizerName || "").trim();
+  const queryParts = [];
+
+  if (normalizedEmail) {
+    queryParts.push({ organizerEmail: normalizedEmail });
+
+    const [society, request] = await Promise.all([
+      Society.findOne({ officialEmail: normalizedEmail }).select("_id").lean(),
+      SocietyRequest.findOne({ officialEmail: normalizedEmail }).select("_id").lean(),
+    ]);
+
+    if (society?._id) queryParts.push({ societyId: society._id });
+    if (request?._id) queryParts.push({ societyRequestId: request._id });
+  }
+
+  if (normalizedOrganizer) {
+    queryParts.push({ organizer: normalizedOrganizer });
+  }
+
+  return queryParts.length > 0 ? { $or: queryParts } : { _id: null };
 };
 
 const normalizeEventPayload = (data, image = null) => {
@@ -130,10 +236,15 @@ router.post("/:token", upload.single("image"), createEvent);
 
 router.get("/", async (req, res) => {
   try {
-    const { email, role } = req.query;
-    const query = role === "society" && email ? { organizerEmail: email.toLowerCase() } : {};
-    const events = await Event.find(query).sort({ createdAt: -1 });
-    res.json(events);
+    const { email, organizer, role } = req.query;
+    const query = role === "society" ? await buildSocietyEventQuery(email, organizer) : {};
+    const events = await Event.find(query)
+      .populate("societyId", "societyName officialEmail")
+      .populate("societyRequestId", "societyName officialEmail")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json(events.map(normalizeEventRecord));
   } catch (err) {
     res.status(500).json({ errors: [err.message] });
   }
@@ -141,7 +252,7 @@ router.get("/", async (req, res) => {
 
 router.get("/analytics", async (_req, res) => {
   try {
-    const all = await Event.find();
+    const all = (await Event.find().lean()).map(normalizeEventRecord);
     const total = all.length;
     const approved = all.filter((event) => event.status === "approved").length;
     const rejected = all.filter((event) => event.status === "rejected").length;
@@ -272,7 +383,7 @@ router.patch("/notifications/read-all/:email", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     await Event.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
-    const event = await Event.findById(req.params.id);
+    const event = await getNormalizedEventById(req.params.id);
     if (!event) return res.status(404).json({ errors: ["Not found"] });
     res.json(event);
   } catch (err) {
@@ -292,7 +403,7 @@ router.post("/", upload.single("image"), async (req, res) => {
 
     const event = new Event(data);
     const saved = await event.save();
-    res.status(201).json(saved);
+    res.status(201).json(normalizeEventRecord(saved.toObject()));
   } catch (err) {
     deleteUploadedFile(req.file?.path);
     if (err.name === "ValidationError") {
@@ -325,7 +436,7 @@ router.put("/:id", upload.single("image"), async (req, res) => {
     });
 
     if (!updated) return res.status(404).json({ errors: ["Not found"] });
-    res.json(updated);
+    res.json(normalizeEventRecord(updated.toObject()));
   } catch (err) {
     deleteUploadedFile(req.file?.path);
     res.status(500).json({ errors: [err.message] });
@@ -347,20 +458,25 @@ router.patch("/:id/status", async (req, res) => {
 
     if (!event) return res.status(404).json({ errors: ["Not found"] });
 
+    const normalizedEvent = await getNormalizedEventById(event._id);
+    if (!normalizedEvent) return res.status(404).json({ errors: ["Not found"] });
+
     const message =
       status === "approved"
-        ? `Your event "${event.title}" has been approved! It is now confirmed for ${event.date}.`
-        : `Your event "${event.title}" was rejected. Reason: ${adminReason}`;
+        ? `Your event "${normalizedEvent.title}" has been approved! It is now confirmed for ${normalizedEvent.date}.`
+        : `Your event "${normalizedEvent.title}" was rejected. Reason: ${adminReason}`;
 
-    await Notification.create({
-      recipientEmail: event.organizerEmail,
-      eventId: event._id,
-      eventTitle: event.title,
-      type: status,
-      message,
-    });
+    if (normalizedEvent.organizerEmail) {
+      await Notification.create({
+        recipientEmail: normalizedEvent.organizerEmail,
+        eventId: normalizedEvent._id,
+        eventTitle: normalizedEvent.title,
+        type: status,
+        message,
+      });
+    }
 
-    res.json(event);
+    res.json(normalizedEvent);
   } catch (err) {
     res.status(400).json({ errors: [err.message] });
   }
@@ -380,7 +496,7 @@ router.delete("/:id", async (req, res) => {
       deleteUploadedFile(path.join(uploadsDir, event.image));
     }
 
-    if (deletedBy === "admin" && adminReason) {
+    if (deletedBy === "admin" && adminReason && event.organizerEmail) {
       await Notification.create({
         recipientEmail: event.organizerEmail,
         eventId: event._id,

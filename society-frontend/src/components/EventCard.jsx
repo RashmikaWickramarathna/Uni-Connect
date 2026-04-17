@@ -6,12 +6,18 @@ const SC = {
   pending:  { color:'#d97706', bg:'#fffbeb', border:'#fcd34d', label:'Pending Approval' },
   approved: { color:'#16a34a', bg:'#f0fdf4', border:'#86efac', label:'Approved' },
   rejected: { color:'#dc2626', bg:'#fef2f2', border:'#fca5a5', label:'Rejected' },
+  cancelled: { color:'#64748b', bg:'#f8fafc', border:'#cbd5e1', label:'Cancelled' },
 };
 
 export default function EventCard({ event, onEdit, onDelete, onGeneratePost }) {
   const st = SC[event.status] || SC.pending;
   const cc = CC[event.category] || '#64748b';
   const img = getImageUrl(event.image);
+  const title = event.title || 'Untitled Event';
+  const description = event.description || 'No description provided.';
+  const venue = event.venue || 'TBA';
+  const category = event.category || 'Other';
+  const maxParticipants = event.maxParticipants || 100;
 
   const fmtDate = d => { if(!d) return ''; const [y,m,day]=d.split('-'); return new Date(y,m-1,day).toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric',year:'numeric'}); };
   const fmtTime = t => { if(!t) return ''; const [h,min]=t.split(':'); return `${h%12||12}:${min} ${h>=12?'PM':'AM'}`; };
@@ -31,8 +37,8 @@ export default function EventCard({ event, onEdit, onDelete, onGeneratePost }) {
 
       {img && (
         <div style={{position:'relative'}}>
-          <img src={img} alt={event.title} style={{width:'100%',height:'200px',objectFit:'cover',display:'block'}} />
-          <span style={{position:'absolute',top:'10px',left:'10px',background:cc,color:'#fff',padding:'3px 12px',borderRadius:'20px',fontSize:'11px',fontWeight:700}}>{event.category}</span>
+          <img src={img} alt={title} style={{width:'100%',height:'200px',objectFit:'cover',display:'block'}} />
+          <span style={{position:'absolute',top:'10px',left:'10px',background:cc,color:'#fff',padding:'3px 12px',borderRadius:'20px',fontSize:'11px',fontWeight:700}}>{category}</span>
         </div>
       )}
 
@@ -40,20 +46,20 @@ export default function EventCard({ event, onEdit, onDelete, onGeneratePost }) {
         <div style={{display:'flex',justifyContent:'space-between',gap:'16px',flexWrap:'wrap'}}>
           <div style={{flex:1}}>
             <div style={{display:'flex',gap:'8px',marginBottom:'8px',flexWrap:'wrap',alignItems:'center'}}>
-              {!img && <span style={{background:cc+'15',color:cc,padding:'3px 12px',borderRadius:'20px',fontSize:'11px',fontWeight:700}}>{event.category}</span>}
+              {!img && <span style={{background:cc+'15',color:cc,padding:'3px 12px',borderRadius:'20px',fontSize:'11px',fontWeight:700}}>{category}</span>}
               <span style={{background:st.bg,color:st.color,border:`1px solid ${st.border}`,padding:'3px 12px',borderRadius:'20px',fontSize:'11px',fontWeight:700}}>{st.label}</span>
               {days!==null&&days>0&&days<=7&&<span style={{background:'#fef3c7',color:'#d97706',border:'1px solid #fcd34d',padding:'3px 10px',borderRadius:'20px',fontSize:'11px',fontWeight:700}}>{days===1?'Tomorrow':`In ${days} days`}</span>}
               {days===0&&<span style={{background:'#fef2f2',color:'#dc2626',border:'1px solid #fca5a5',padding:'3px 10px',borderRadius:'20px',fontSize:'11px',fontWeight:700}}>Today</span>}
             </div>
 
-            <h3 style={{fontSize:'16px',fontWeight:700,color:'#0f172a',marginBottom:'6px',fontFamily:'Syne, sans-serif'}}>{event.title}</h3>
-            <p style={{fontSize:'13px',color:'#64748b',marginBottom:'10px',lineHeight:1.6}}>{event.description}</p>
+            <h3 style={{fontSize:'16px',fontWeight:700,color:'#0f172a',marginBottom:'6px',fontFamily:'Syne, sans-serif'}}>{title}</h3>
+            <p style={{fontSize:'13px',color:'#64748b',marginBottom:'10px',lineHeight:1.6}}>{description}</p>
 
             <div style={{display:'flex',gap:'16px',flexWrap:'wrap',fontSize:'13px',color:'#94a3b8',marginBottom:'10px'}}>
               <span><strong style={{color:'#374151'}}>Date:</strong> {fmtDate(event.date)}</span>
               <span><strong style={{color:'#374151'}}>Time:</strong> {fmtTime(event.time)}</span>
-              <span><strong style={{color:'#374151'}}>Venue:</strong> {event.venue}</span>
-              <span><strong style={{color:'#374151'}}>Max:</strong> {event.maxParticipants}</span>
+              <span><strong style={{color:'#374151'}}>Venue:</strong> {venue}</span>
+              <span><strong style={{color:'#374151'}}>Max:</strong> {maxParticipants}</span>
               {event.views>0&&<span><strong style={{color:'#374151'}}>Views:</strong> {event.views}</span>}
             </div>
 

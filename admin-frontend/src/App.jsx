@@ -6,6 +6,31 @@ import Reminders from './components/Reminders';
 import ReasonModal from './components/ReasonModal';
 import { getAllEvents, approveEvent, rejectEvent, deleteEvent } from './api';
 
+const safeText = value => String(value ?? '');
+
+const normalizeStatus = status => {
+  const normalized = safeText(status).toLowerCase();
+  if (normalized === 'published') return 'approved';
+  if (normalized === 'draft') return 'pending';
+  return normalized || 'pending';
+};
+
+const normalizeEvent = event => ({
+  ...event,
+  title: safeText(event?.title).trim() || 'Untitled Event',
+  description: safeText(event?.description),
+  organizer: safeText(event?.organizer).trim() || 'Unknown Society',
+  organizerEmail: safeText(event?.organizerEmail).trim().toLowerCase(),
+  venue: safeText(event?.venue).trim() || 'TBA',
+  category: safeText(event?.category).trim() || 'Other',
+  date: safeText(event?.date),
+  time: safeText(event?.time),
+  status: normalizeStatus(event?.status),
+  maxParticipants: Number(event?.maxParticipants) > 0 ? Number(event.maxParticipants) : 100,
+  tags: Array.isArray(event?.tags) ? event.tags : [],
+  views: Number.isFinite(Number(event?.views)) ? Number(event.views) : 0,
+});
+
 export default function App() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,18 +43,28 @@ export default function App() {
 
   const showToast = (msg, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null),4000); };
 
-  const fetchEvents = async () => {
-    try { const r=await getAllEvents(); setEvents(r.data); }
+  const fetchEvents = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    try { const r=await getAllEvents(); setEvents((r.data || []).map(normalizeEvent)); }
     catch { showToast('Failed to load events.','error'); }
-    finally { setLoading(false); }
+    finally { if (showLoading) setLoading(false); }
   };
 
-  useEffect(()=>{fetchEvents();},[]);
+  useEffect(() => {
+    fetchEvents();
+
+    const handleFocus = () => {
+      fetchEvents(false);
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
 
   const handleApprove = async (id) => {
     try {
       const r=await approveEvent(id);
-      setEvents(p=>p.map(e=>e._id===id?r.data:e));
+      setEvents(p=>p.map(e=>e._id===id?normalizeEvent(r.data):e));
       showToast('Event approved! Society has been notified.');
     } catch(err) { showToast(err.response?.data?.errors?.[0]||'Failed.','error'); }
   };
@@ -37,7 +72,7 @@ export default function App() {
   const handleRejectConfirm = async (reason) => {
     try {
       const r=await rejectEvent(rejectModal._id,reason);
-      setEvents(p=>p.map(e=>e._id===rejectModal._id?r.data:e));
+      setEvents(p=>p.map(e=>e._id===rejectModal._id?normalizeEvent(r.data):e));
       showToast('Event rejected. Society notified with reason.','warning');
     } catch(err) { showToast(err.response?.data?.errors?.[0]||'Failed.','error'); }
     finally { setRejectModal(null); }
@@ -61,11 +96,12 @@ export default function App() {
 
   let filtered = filter==='all' ? events : events.filter(e=>e.status===filter);
   if (search.trim()) {
+    const searchValue = search.toLowerCase();
     filtered = filtered.filter(e=>
-      e.title.toLowerCase().includes(search.toLowerCase()) ||
-      e.organizer.toLowerCase().includes(search.toLowerCase()) ||
-      e.venue.toLowerCase().includes(search.toLowerCase()) ||
-      e.organizerEmail.toLowerCase().includes(search.toLowerCase())
+      safeText(e.title).toLowerCase().includes(searchValue) ||
+      safeText(e.organizer).toLowerCase().includes(searchValue) ||
+      safeText(e.venue).toLowerCase().includes(searchValue) ||
+      safeText(e.organizerEmail).toLowerCase().includes(searchValue)
     );
   }
 

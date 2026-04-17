@@ -1,7 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 const CATS = ['Academic','Sports','Cultural','Social','Workshop','Other'];
-const INIT = { title:'', description:'', date:'', time:'', venue:'', category:'Academic', organizer:'', organizerEmail:'', maxParticipants:100, tags:'' };
+
+const buildInitialForm = (editData, currentUser) => ({
+  title: editData?.title || '',
+  description: editData?.description || '',
+  date: editData?.date || '',
+  time: editData?.time || '',
+  venue: editData?.venue || '',
+  category: editData?.category || 'Academic',
+  organizer: editData?.organizer || currentUser?.name || '',
+  organizerEmail: editData?.organizerEmail || currentUser?.email || '',
+  maxParticipants: editData?.maxParticipants || 100,
+  tags: (editData?.tags || []).join(', '),
+});
 
 const validate = (form, imgFile) => {
   const e = {};
@@ -36,8 +48,8 @@ const validate = (form, imgFile) => {
   return e;
 };
 
-export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDates }) {
-  const [form, setForm] = useState(INIT);
+export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDates, currentUser }) {
+  const [form, setForm] = useState(buildInitialForm(editData, currentUser));
   const [errs, setErrs] = useState({});
   const [serverErrs, setServerErrs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -47,11 +59,14 @@ export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDate
 
   useEffect(() => {
     if (editData) {
-      setForm({ title:editData.title||'', description:editData.description||'', date:editData.date||'', time:editData.time||'', venue:editData.venue||'', category:editData.category||'Academic', organizer:editData.organizer||'', organizerEmail:editData.organizerEmail||'', maxParticipants:editData.maxParticipants||100, tags:(editData.tags||[]).join(', ') });
+      setForm(buildInitialForm(editData, currentUser));
       setImgPrev(editData.image ? `http://localhost:5000/uploads/${editData.image}` : null);
-    } else { setForm(INIT); setImgPrev(null); }
+    } else {
+      setForm(buildInitialForm(null, currentUser));
+      setImgPrev(null);
+    }
     setImgFile(null); setErrs({}); setServerErrs([]);
-  }, [editData]);
+  }, [editData, currentUser]);
 
   const onChange = e => {
     const { name, value } = e.target;
@@ -81,7 +96,7 @@ export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDate
       Object.keys(form).forEach(k => fd.append(k, form[k]));
       if (imgFile) fd.append('image', imgFile);
       await onSubmit(fd);
-      if (!editData) { setForm(INIT); setImgFile(null); setImgPrev(null); if(fileRef.current) fileRef.current.value=''; setErrs({}); }
+      if (!editData) { setForm(buildInitialForm(null, currentUser)); setImgFile(null); setImgPrev(null); if(fileRef.current) fileRef.current.value=''; setErrs({}); }
     } catch(err) {
       const d = err.response?.data;
       setServerErrs(d?.errors||[d?.message||'Something went wrong.']);
@@ -120,14 +135,15 @@ export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDate
 
           <div style={fld}>
             <label style={lbl}>Organizer / Society Name *</label>
-            <input style={inp('organizer')} name="organizer" value={form.organizer} onChange={onChange} placeholder="e.g. Computer Science Society" />
+            <input style={inp('organizer')} name="organizer" value={form.organizer} onChange={onChange} placeholder="e.g. Computer Science Society" readOnly />
+            <p style={{fontSize:'11px',color:'#94a3b8',marginTop:'4px'}}>Linked to the signed-in society account.</p>
             {errTxt('organizer')}
           </div>
 
           <div style={{...fld,gridColumn:'1 / -1'}}>
             <label style={lbl}>Society Email *</label>
-            <input style={inp('organizerEmail')} name="organizerEmail" value={form.organizerEmail} onChange={onChange} placeholder="e.g. cssociety@university.edu" type="email" />
-            <p style={{fontSize:'11px',color:'#94a3b8',marginTop:'4px'}}>Must contain @. Max 10 events per society per day.</p>
+            <input style={inp('organizerEmail')} name="organizerEmail" value={form.organizerEmail} onChange={onChange} placeholder="e.g. cssociety@university.edu" type="email" readOnly />
+            <p style={{fontSize:'11px',color:'#94a3b8',marginTop:'4px'}}>Linked to the signed-in society email. Max 10 events per society per day.</p>
             {errTxt('organizerEmail')}
           </div>
 

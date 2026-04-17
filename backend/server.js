@@ -64,8 +64,11 @@ app.post("/api/test-email", async (req, res) => {
 
   const to = req.body?.to || process.env.EMAIL_USER;
   const societyName = req.body?.societyName || "Test Society";
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-  const link = req.body?.link || frontendUrl;
+  const registrationFrontendUrl =
+    process.env.REGISTRATION_FRONTEND_URL ||
+    process.env.SOCIETY_FRONTEND_URL ||
+    "http://localhost:3002";
+  const link = req.body?.link || registrationFrontendUrl;
 
   if (!to) {
     return res.status(400).json({
