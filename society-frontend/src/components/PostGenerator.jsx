@@ -13,7 +13,7 @@ export default function PostGenerator({ event, onClose }) {
 
   const handlePrint = () => {
     const win = window.open('','_blank');
-    win.document.write(`<html><head><title>Event Poster - ${event.title}</title><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Space Grotesk',sans-serif;}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body>${posterRef.current.innerHTML}</body></html>`);
+    win.document.write(`<html><head><title>Event Poster - ${event.title}</title><style>*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif !important;}body{font-family:Arial,sans-serif;}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body>${posterRef.current.innerHTML}</body></html>`);
     win.document.close();
     setTimeout(()=>{win.print();win.close();},600);
   };
