@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-Bg_NI1en.js";var t=e();function n(){return(0,t.jsx)(`div`,{className:`loading`,children:`Loading...`})}export{n as t};

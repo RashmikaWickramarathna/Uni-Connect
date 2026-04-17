@@ -1,0 +1,1 @@
+import{t as e}from"./apiClient-C-n7pVPk.js";var t={create:t=>e.post(`/inquiries`,t),getMy:t=>e.get(`/inquiries/my/${t}`),getAll:()=>e.get(`/inquiries/all`),update:(t,n)=>e.put(`/inquiries/${t}`,n),delete:t=>e.delete(`/inquiries/${t}`),reply:(t,n)=>e.put(`/inquiries/${t}/reply`,{adminReply:n})};export{t};

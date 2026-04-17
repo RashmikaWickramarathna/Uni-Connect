@@ -1,0 +1,1 @@
+import{t as e}from"./apiClient-C-n7pVPk.js";var t={create:t=>e.post(`/feedback`,t),getMy:t=>e.get(`/feedback/my/${t}`),getAll:()=>e.get(`/feedback/all`),update:(t,n)=>e.put(`/feedback/${t}`,n),delete:t=>e.delete(`/feedback/${t}`),reply:(t,n)=>e.put(`/feedback/${t}/reply`,{adminReply:n})};export{t};
