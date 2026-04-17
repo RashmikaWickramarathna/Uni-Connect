@@ -8,7 +8,7 @@ const menuItems = [
   { label: "Dashboard", icon: FiHome, path: "/admin" },
   { label: "User Accounts", icon: FiUsers, disabled: true },
   { label: "Society Approvals", icon: FiClipboard, path: "/society-admin/requests" },
-  { label: "Events", icon: FiCalendar, disabled: true },
+  { label: "Events", icon: FiCalendar, path: "/admin/events" },
   { label: "Ticket Reservations", icon: FiFileText, disabled: true },
   { label: "Payments", icon: FiCreditCard, disabled: true },
   { label: "Feedback", icon: FiMessageSquare, path: "/admin/feedbacks" },

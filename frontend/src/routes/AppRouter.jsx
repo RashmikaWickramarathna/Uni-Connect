@@ -20,9 +20,10 @@ const SocialDashboard = lazy(() => import("../pages/student/SocialDashboard"));
 const MyFeedbacks = lazy(() => import("../pages/student/MyFeedbacks"));
 const MyInquiries = lazy(() => import("../pages/student/MyInquiries"));
 const Profile = lazy(() => import("../pages/student/Profile"));
-const AdminDashboard = lazy(() => import("../pages/admin/Dashboard"));
-const AdminFeedbacks = lazy(() => import("../pages/admin/Feedbacks"));
-const AdminInquiries = lazy(() => import("../pages/admin/Inquiries"));
+const AdminDashboard = lazy(() => import("../pages/Admin/Dashboard"));
+const AdminEvents = lazy(() => import("../pages/Admin/Events"));
+const AdminFeedbacks = lazy(() => import("../pages/Admin/Feedbacks"));
+const AdminInquiries = lazy(() => import("../pages/Admin/Inquiries"));
 
 const LoadingWrapper = styled.div`
   min-height: 100vh;
@@ -112,6 +113,7 @@ export default function AppRouter() {
         <Route path="/my-inquiries" element={<ProtectedRoute allowedRole="student"><MyInquiries /></ProtectedRoute>} />
 
         <Route path="/admin" element={<ProtectedRoute allowedRole="admin"><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/events" element={<ProtectedRoute allowedRole="admin"><AdminEvents /></ProtectedRoute>} />
         <Route path="/admin/feedbacks" element={<ProtectedRoute allowedRole="admin"><AdminFeedbacks /></ProtectedRoute>} />
         <Route path="/admin/inquiries" element={<ProtectedRoute allowedRole="admin"><AdminInquiries /></ProtectedRoute>} />
 

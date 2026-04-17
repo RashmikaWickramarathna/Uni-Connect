@@ -32,29 +32,6 @@ const normalizeEvent = event => ({
   views: Number.isFinite(Number(event?.views)) ? Number(event.views) : 0,
 });
 
-const PAGE_META = {
-  dashboard: {
-    kicker: 'Uni-Connect admin workspace',
-    title: 'Event Management',
-    subtitle: 'Review submissions, keep the event pipeline moving, and notify societies from one place.',
-  },
-  analytics: {
-    kicker: 'Uni-Connect admin workspace',
-    title: 'Event Analytics',
-    subtitle: 'Track approval trends, activity by category, and the most active societies.',
-  },
-  reminders: {
-    kicker: 'Uni-Connect admin workspace',
-    title: 'Reminder Center',
-    subtitle: 'Monitor upcoming approved events and the reminder emails sent to societies.',
-  },
-  calendar: {
-    kicker: 'Uni-Connect admin workspace',
-    title: 'Calendar View',
-    subtitle: 'Scan the full event schedule with a cleaner, shared Uni-Connect dashboard shell.',
-  },
-};
-
 const TABS = [
   { key: 'dashboard', label: 'Events', note: 'Review queue', short: 'EV' },
   { key: 'analytics', label: 'Analytics', note: 'Trends and totals', short: 'AN' },
@@ -233,8 +210,6 @@ export default function App() {
     },
   ];
 
-  const currentMeta = PAGE_META[activeTab];
-
   return (
     <div className="panel-shell">
       {toast ? <div className={`panel-toast ${toast.type || 'success'}`}>{toast.msg}</div> : null}
@@ -280,52 +255,10 @@ export default function App() {
           ))}
         </nav>
 
-        <div className="panel-sidebar-card">
-          <h3>Queue overview</h3>
-          <p>Keep the event review flow moving with a layout that now matches the main Uni-Connect admin style.</p>
-          <div className="panel-sidebar-stats">
-            <div className="panel-sidebar-stat">
-              <strong>{stats.pending}</strong>
-              <span>Pending</span>
-            </div>
-            <div className="panel-sidebar-stat">
-              <strong>{stats.approved}</strong>
-              <span>Approved</span>
-            </div>
-            <div className="panel-sidebar-stat">
-              <strong>{stats.rejected}</strong>
-              <span>Rejected</span>
-            </div>
-            <div className="panel-sidebar-stat">
-              <strong>{stats.total}</strong>
-              <span>Total</span>
-            </div>
-          </div>
-        </div>
+       
       </aside>
 
       <div className="panel-main">
-        <header className="panel-topbar">
-          <div className="panel-topbar-copy">
-            <p className="panel-kicker">{currentMeta.kicker}</p>
-            <h1 className="panel-page-title">{currentMeta.title}</h1>
-            <p className="panel-page-subtitle">{currentMeta.subtitle}</p>
-          </div>
-
-          <div className="panel-topbar-right">
-            <div className="panel-status-chip">
-              {stats.pending} {stats.pending === 1 ? 'event needs' : 'events need'} review
-            </div>
-            <div className="panel-profile">
-              <div className="panel-avatar">AD</div>
-              <div className="panel-profile-copy">
-                <strong>Admin Team</strong>
-                <span>events@uni-connect.local</span>
-              </div>
-            </div>
-          </div>
-        </header>
-
         <main className="panel-content">
           {activeTab === 'dashboard' ? (
             <>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FiClipboard, FiHelpCircle, FiInfo, FiMessageSquare } from 'react-icons/fi';
+import { FiCalendar, FiClipboard, FiHelpCircle, FiInfo, FiMessageSquare } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 import AdminLayout from '../../components/AdminLayout';
@@ -107,6 +107,20 @@ export default function Dashboard() {
               <div className="module-meta">
                 <span className="pill-dot" />
                 Manage approvals
+              </div>
+            </Link>
+
+            <Link className="module-card module-card-link" to="/admin/events">
+              <div className="module-card-head">
+                <div className="module-icon feedback">
+                  <FiCalendar />
+                </div>
+              </div>
+              <h4 className="module-title">Event Management</h4>
+              <p className="module-description">Open the event moderation panel directly inside the main Uni-Connect admin workspace.</p>
+              <div className="module-meta">
+                <span className="pill-dot" />
+                Manage events
               </div>
             </Link>
 
