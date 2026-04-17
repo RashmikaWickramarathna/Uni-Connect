@@ -1,17 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import ApprovalRegistration from './components/ApprovalRegistration';
-import EventForm from './components/EventForm';
-import EventCard from './components/EventCard';
 import EventCalendar from './components/EventCalendar';
+import EventCard from './components/EventCard';
+import EventForm from './components/EventForm';
 import NotificationBanner from './components/NotificationBanner';
 import PostGenerator from './components/PostGenerator';
-import { getSocietyEvents, createEvent, updateEvent, deleteEvent } from './api';
+import { createEvent, deleteEvent, getSocietyEvents, updateEvent } from './api';
+import './portalTheme.css';
 
 const DEMO_USER = {
   name: 'Computer Science Society',
   email: 'cssociety@university.edu',
   role: 'society',
 };
+
+const safeText = value => String(value ?? '');
 
 const getStoredUser = () => {
   try {
@@ -20,8 +23,6 @@ const getStoredUser = () => {
     return DEMO_USER;
   }
 };
-
-const safeText = value => String(value ?? '');
 
 const normalizeStatus = status => {
   const normalized = safeText(status).toLowerCase();
@@ -55,6 +56,59 @@ const withOwnedEventFields = (formData, currentUser) => {
   if (currentUser?.email) next.set('organizerEmail', currentUser.email);
   return next;
 };
+
+const PAGE_META = {
+  dashboard: {
+    kicker: 'Uni-Connect society portal',
+    title: 'My Events',
+    subtitle: 'Track submissions, approval states, and upcoming activity with the same product styling as the main app.',
+  },
+  create: {
+    kicker: 'Uni-Connect society portal',
+    title: 'Create Event',
+    subtitle: 'Prepare event details in the shared Uni-Connect dashboard shell before sending them for admin approval.',
+  },
+  calendar: {
+    kicker: 'Uni-Connect society portal',
+    title: 'Event Calendar',
+    subtitle: 'See your society schedule in one place, with approved and pending events clearly separated.',
+  },
+};
+
+const TABS = [
+  { key: 'dashboard', label: 'My Events', note: 'Status overview', short: 'EV' },
+  { key: 'create', label: 'Create Event', note: 'New submission', short: 'CR' },
+  { key: 'calendar', label: 'Calendar', note: 'Schedule view', short: 'CA' },
+];
+
+function SidebarNavItem({ active, label, note, short, onClick }) {
+  return (
+    <button type="button" className={`panel-nav-item${active ? ' active' : ''}`} onClick={onClick}>
+      <span className="panel-nav-icon">{short}</span>
+      <span className="panel-nav-copy">
+        <strong>{label}</strong>
+        <span>{note}</span>
+      </span>
+    </button>
+  );
+}
+
+function StatCard({ active, accent, soft, label, note, short, value, onClick }) {
+  return (
+    <article
+      className={`panel-stat-card${active ? ' is-active' : ''}`}
+      style={{ '--stat-accent': accent, '--stat-soft': soft }}
+      onClick={onClick}
+    >
+      <div className="panel-stat-card-header">
+        <span className="panel-stat-icon">{short}</span>
+        <div className="panel-stat-value">{value}</div>
+      </div>
+      <div className="panel-stat-label">{label}</div>
+      <div className="panel-stat-note">{note}</div>
+    </article>
+  );
+}
 
 export default function App() {
   const [user, setUser] = useState(getStoredUser);
@@ -90,16 +144,14 @@ export default function App() {
     localStorage.setItem('user', JSON.stringify(nextUser));
     setUser(nextUser);
     clearApprovalToken();
-    showToast(
-      registeredSociety?.message || 'Society account created successfully.'
-    );
+    showToast(registeredSociety?.message || 'Society account created successfully.');
   };
 
   const fetchEvents = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const res = await getSocietyEvents(user.email, user.name);
-      setEvents((res.data || []).map(normalizeEvent));
+      const response = await getSocietyEvents(user.email, user.name);
+      setEvents((response.data || []).map(normalizeEvent));
     } catch {
       showToast('Failed to load events.', 'error');
     } finally {
@@ -121,69 +173,117 @@ export default function App() {
   }, [approvalToken, user.email, user.name]);
 
   const handleCreate = async (formData) => {
-    const res = await createEvent(withOwnedEventFields(formData, user));
-    setEvents(p => [normalizeEvent(res.data), ...p]);
-    showToast('Event created! Waiting for admin approval.');
+    const response = await createEvent(withOwnedEventFields(formData, user));
+    setEvents(previous => [normalizeEvent(response.data), ...previous]);
+    showToast('Event created and sent for admin approval.');
     setActiveTab('dashboard');
   };
 
   const handleUpdate = async (formData) => {
-    const res = await updateEvent(editData._id, withOwnedEventFields(formData, user));
-    setEvents(p => p.map(e => e._id === editData._id ? normalizeEvent(res.data) : e));
+    const response = await updateEvent(editData._id, withOwnedEventFields(formData, user));
+    setEvents(previous =>
+      previous.map(event =>
+        event._id === editData._id ? normalizeEvent(response.data) : event
+      )
+    );
     setEditData(null);
-    showToast('Event updated successfully!');
+    showToast('Event updated successfully.');
     setActiveTab('dashboard');
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this event?')) return;
     await deleteEvent(id);
-    setEvents(p => p.filter(e => e._id !== id));
+    setEvents(previous => previous.filter(event => event._id !== id));
     showToast('Event deleted.', 'warning');
   };
 
-  const handleEdit = (event) => { setEditData(event); setActiveTab('create'); };
-
-  const stats = {
-    total:    events.length,
-    pending:  events.filter(e => e.status === 'pending').length,
-    approved: events.filter(e => e.status === 'approved').length,
-    rejected: events.filter(e => e.status === 'rejected').length,
+  const handleEdit = (event) => {
+    setEditData(event);
+    setActiveTab('create');
   };
 
-  const bookedDates = events.map(e => ({ date: e.date, title: e.title, id: e._id }));
+  const stats = {
+    total: events.length,
+    pending: events.filter(event => event.status === 'pending').length,
+    approved: events.filter(event => event.status === 'approved').length,
+    rejected: events.filter(event => event.status === 'rejected').length,
+  };
 
-  // Filter and search
-  let filtered = filter === 'all' ? events : events.filter(e => e.status === filter);
+  const bookedDates = events.map(event => ({
+    date: event.date,
+    title: event.title,
+    id: event._id,
+  }));
+
+  let filtered = filter === 'all' ? events : events.filter(event => event.status === filter);
   if (search.trim()) {
     const searchValue = search.toLowerCase();
-    filtered = filtered.filter(e =>
-      safeText(e.title).toLowerCase().includes(searchValue) ||
-      safeText(e.venue).toLowerCase().includes(searchValue) ||
-      safeText(e.category).toLowerCase().includes(searchValue)
+    filtered = filtered.filter(event =>
+      safeText(event.title).toLowerCase().includes(searchValue) ||
+      safeText(event.venue).toLowerCase().includes(searchValue) ||
+      safeText(event.category).toLowerCase().includes(searchValue)
     );
   }
 
-  const tabs = [
-    { key: 'dashboard', label: 'My Events' },
-    { key: 'create', label: editData ? 'Edit Event' : 'Create Event' },
-    { key: 'calendar', label: 'Calendar' },
-  ];
-
-  const toastStyle = t => t === 'error'
-    ? { bg: '#fef2f2', border: '#fca5a5', color: '#b91c1c' }
-    : t === 'warning'
-    ? { bg: '#fffbeb', border: '#fcd34d', color: '#92400e' }
-    : { bg: '#f0fdf4', border: '#86efac', color: '#15803d' };
-
-  // Upcoming events in next 7 days
-  const today = new Date(); today.setHours(0,0,0,0);
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-  const upcomingSoon = events.filter(e => {
-    if (e.status !== 'approved' || !e.date) return false;
-    const diff = Math.ceil((new Date(e.date+'T00:00:00') - today) / (1000*60*60*24));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const upcomingSoon = events.filter(event => {
+    if (event.status !== 'approved' || !event.date) return false;
+    const diff = Math.ceil((new Date(`${event.date}T00:00:00`) - today) / (1000 * 60 * 60 * 24));
     return diff >= 0 && diff <= 7;
   });
+
+  const spotlightStats = [
+    { label: 'Pending', value: stats.pending, accent: '#f59e0b' },
+    { label: 'Approved', value: stats.approved, accent: '#10b981' },
+    { label: 'Rejected', value: stats.rejected, accent: '#ef4444' },
+  ];
+
+  const statCards = [
+    {
+      label: 'Total Events',
+      note: 'Everything your society has submitted or updated.',
+      value: stats.total,
+      accent: '#2563eb',
+      soft: 'rgba(37, 99, 235, 0.12)',
+      short: 'ALL',
+      filterValue: 'all',
+    },
+    {
+      label: 'Pending',
+      note: 'Waiting for the admin team to review.',
+      value: stats.pending,
+      accent: '#f59e0b',
+      soft: 'rgba(245, 158, 11, 0.16)',
+      short: 'PEN',
+      filterValue: 'pending',
+    },
+    {
+      label: 'Approved',
+      note: 'Ready to run and visible in your schedule.',
+      value: stats.approved,
+      accent: '#10b981',
+      soft: 'rgba(16, 185, 129, 0.14)',
+      short: 'APP',
+      filterValue: 'approved',
+    },
+    {
+      label: 'Rejected',
+      note: 'Needs a fix before it can be resubmitted.',
+      value: stats.rejected,
+      accent: '#ef4444',
+      soft: 'rgba(239, 68, 68, 0.14)',
+      short: 'REJ',
+      filterValue: 'rejected',
+    },
+  ];
+
+  const pageKey = activeTab === 'create' && editData ? 'create' : activeTab;
+  const currentMeta = {
+    ...PAGE_META[pageKey],
+    title: activeTab === 'create' && editData ? 'Edit Event' : PAGE_META[pageKey].title,
+  };
 
   if (approvalToken) {
     return (
@@ -196,156 +296,209 @@ export default function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex' }}>
+    <div className="panel-shell">
+      {toast ? <div className={`panel-toast ${toast.type || 'success'}`}>{toast.msg}</div> : null}
+      {postEvent ? <PostGenerator event={postEvent} onClose={() => setPostEvent(null)} /> : null}
 
-      {/* Toast */}
-      {toast && (() => { const ts = toastStyle(toast.type); return (
-        <div style={{ position:'fixed', top:'20px', right:'20px', zIndex:9990, background:ts.bg, border:`1px solid ${ts.border}`, borderRadius:'10px', padding:'12px 20px', color:ts.color, fontSize:'14px', fontWeight:600, boxShadow:'0 4px 20px rgba(0,0,0,0.08)', animation:'slideIn 0.3s ease', maxWidth:'380px' }}>
-          {toast.msg}
-        </div>
-      ); })()}
-
-      {/* Post Generator Modal */}
-      {postEvent && <PostGenerator event={postEvent} onClose={() => setPostEvent(null)} />}
-
-      {/* Sidebar */}
-      <aside style={{ width:'230px', background:'#fff', borderRight:'1px solid #e2e8f0', padding:'28px 16px', display:'flex', flexDirection:'column', position:'fixed', top:0, left:0, bottom:0, boxShadow:'2px 0 8px rgba(0,0,0,0.04)', zIndex:100 }}>
-        <div style={{ marginBottom:'28px', paddingLeft:'8px' }}>
-          <div style={{ fontFamily:'Syne, sans-serif', fontSize:'22px', fontWeight:800, color:'#0f172a' }}>UniEvents</div>
-          <div style={{ fontSize:'11px', color:'#2563eb', fontWeight:700, letterSpacing:'0.05em', marginTop:'2px' }}>SOCIETY PORTAL</div>
-        </div>
-
-        {tabs.map(t => (
-          <button key={t.key} onClick={() => { setActiveTab(t.key); if (t.key !== 'create') setEditData(null); }}
-            style={{ display:'flex', alignItems:'center', padding:'10px 14px', borderRadius:'8px', border:'none', cursor:'pointer', textAlign:'left', background:activeTab===t.key?'#eff6ff':'transparent', color:activeTab===t.key?'#2563eb':'#64748b', fontFamily:'Space Grotesk, sans-serif', fontSize:'14px', fontWeight:600, borderLeft:activeTab===t.key?'3px solid #2563eb':'3px solid transparent', marginBottom:'4px', transition:'all 0.15s' }}>
-            {t.label}
-          </button>
-        ))}
-
-        {/* Upcoming soon banner in sidebar */}
-        {upcomingSoon.length > 0 && (
-          <div style={{ margin:'16px 0', padding:'12px', background:'#fffbeb', borderRadius:'10px', border:'1px solid #fcd34d' }}>
-            <div style={{ fontSize:'11px', color:'#92400e', fontWeight:700, marginBottom:'6px' }}>UPCOMING SOON</div>
-            {upcomingSoon.slice(0,2).map(ev => (
-              <div key={ev._id} style={{ fontSize:'12px', color:'#374151', marginBottom:'4px' }}>
-                <strong>{ev.title}</strong>
-                <div style={{ color:'#64748b', fontSize:'11px' }}>{ev.date}</div>
-              </div>
-            ))}
+      <aside className="panel-sidebar">
+        <div className="panel-brand">
+          <div className="panel-brand-mark">SC</div>
+          <div className="panel-brand-copy">
+            <div className="panel-brand-title">Uni-Connect</div>
+            <div className="panel-brand-sub">Society portal</div>
           </div>
-        )}
+        </div>
 
-        {/* Stats */}
-        <div style={{ marginTop:'auto', padding:'16px', background:'#f8fafc', borderRadius:'10px', border:'1px solid #e2e8f0' }}>
-          <div style={{ fontSize:'10px', color:'#94a3b8', marginBottom:'10px', fontWeight:700, letterSpacing:'0.08em' }}>MY EVENTS</div>
-          {[['Total',stats.total,'#2563eb'],['Pending',stats.pending,'#d97706'],['Approved',stats.approved,'#16a34a'],['Rejected',stats.rejected,'#dc2626']].map(([l,v,c]) => (
-            <div key={l} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'6px' }}>
-              <span style={{ fontSize:'13px', color:'#64748b' }}>{l}</span>
-              <span style={{ fontSize:'13px', fontWeight:700, color:'#fff', background:c, borderRadius:'20px', padding:'1px 10px', minWidth:'26px', textAlign:'center' }}>{v}</span>
-            </div>
+        <nav className="panel-nav" aria-label="Society navigation">
+          {TABS.map(tab => (
+            <SidebarNavItem
+              key={tab.key}
+              active={activeTab === tab.key}
+              label={tab.label}
+              note={tab.note}
+              short={tab.short}
+              onClick={() => {
+                setActiveTab(tab.key);
+                if (tab.key !== 'create') {
+                  setEditData(null);
+                }
+              }}
+            />
           ))}
-        </div>
-      </aside>
+        </nav>
 
-      {/* Main content */}
-      <main style={{ marginLeft:'230px', padding:'36px 40px', flex:1 }}>
-
-        {/* Header */}
-        <div style={{ marginBottom:'28px', paddingBottom:'20px', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div>
-            <h1 style={{ fontFamily:'Syne, sans-serif', fontSize:'26px', fontWeight:800, color:'#0f172a' }}>
-              {{ dashboard:'My Events', create:editData?'Edit Event':'Create Event', calendar:'Event Calendar' }[activeTab]}
-            </h1>
-            <p style={{ color:'#94a3b8', marginTop:'4px', fontSize:'14px' }}>Welcome, {user.name}</p>
-          </div>
-          <NotificationBanner userEmail={user.email} />
-        </div>
-
-        {/* DASHBOARD TAB */}
-        {activeTab === 'dashboard' && (
-          <>
-            {/* Stat cards */}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'16px', marginBottom:'28px' }}>
-              {[
-                { label:'Total Events', value:stats.total, color:'#2563eb', icon:'📋' },
-                { label:'Pending', value:stats.pending, color:'#d97706', icon:'⏳' },
-                { label:'Approved', value:stats.approved, color:'#16a34a', icon:'✅' },
-                { label:'Rejected', value:stats.rejected, color:'#dc2626', icon:'❌' },
-              ].map(s => (
-                <div key={s.label} style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:'12px', padding:'20px 22px', boxShadow:'0 1px 4px rgba(0,0,0,0.04)', borderTop:`3px solid ${s.color}`, cursor:'pointer' }}
-                  onClick={() => { setFilter(s.label.toLowerCase() === 'total events' ? 'all' : s.label.toLowerCase()); }}>
-                  <div style={{ fontSize:'24px', marginBottom:'8px' }}>{s.icon}</div>
-                  <div style={{ fontSize:'28px', fontWeight:800, color:s.color, fontFamily:'Syne, sans-serif' }}>{s.value}</div>
-                  <div style={{ fontSize:'13px', color:'#64748b', marginTop:'4px' }}>{s.label}</div>
+        {upcomingSoon.length > 0 ? (
+          <div className="panel-sidebar-card">
+            <h3>Upcoming soon</h3>
+            <p>Your next approved events for the next seven days.</p>
+            <div className="panel-sidebar-list">
+              {upcomingSoon.slice(0, 2).map(event => (
+                <div key={event._id} className="panel-sidebar-entry">
+                  <strong>{event.title}</strong>
+                  <span>{event.date}</span>
                 </div>
               ))}
             </div>
+          </div>
+        ) : null}
 
-            {/* Search and filter */}
-            <div style={{ display:'flex', gap:'12px', marginBottom:'20px', flexWrap:'wrap', alignItems:'center' }}>
-              <input
-                value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search events by title, venue, category..."
-                style={{ flex:1, minWidth:'200px', padding:'9px 14px', border:'1px solid #e2e8f0', borderRadius:'8px', fontSize:'14px', color:'#0f172a', fontFamily:'Space Grotesk, sans-serif', outline:'none', background:'#fff' }}
-              />
-              <div style={{ display:'flex', gap:'6px' }}>
-                {['all','pending','approved','rejected'].map(f => (
-                  <button key={f} onClick={() => setFilter(f)} style={{ padding:'7px 14px', borderRadius:'6px', border:filter===f?'1px solid #2563eb':'1px solid #e2e8f0', background:filter===f?'#2563eb':'#fff', color:filter===f?'#fff':'#64748b', fontSize:'13px', fontWeight:600, fontFamily:'Space Grotesk, sans-serif', cursor:'pointer', transition:'all 0.15s' }}>
-                    {f === 'all' ? `All (${stats.total})` : f.charAt(0).toUpperCase()+f.slice(1)}
-                  </button>
-                ))}
+        <div className="panel-sidebar-card metrics">
+          <h3>Portal snapshot</h3>
+          <p>Plan, submit, and track society events in a layout that now matches the rest of Uni-Connect.</p>
+          <div className="panel-sidebar-stats">
+            <div className="panel-sidebar-stat">
+              <strong>{stats.total}</strong>
+              <span>Total</span>
+            </div>
+            <div className="panel-sidebar-stat">
+              <strong>{stats.pending}</strong>
+              <span>Pending</span>
+            </div>
+            <div className="panel-sidebar-stat">
+              <strong>{stats.approved}</strong>
+              <span>Approved</span>
+            </div>
+            <div className="panel-sidebar-stat">
+              <strong>{stats.rejected}</strong>
+              <span>Rejected</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <div className="panel-main">
+        <header className="panel-topbar">
+          <div className="panel-topbar-copy">
+            <p className="panel-kicker">{currentMeta.kicker}</p>
+            <h1 className="panel-page-title">{currentMeta.title}</h1>
+            <p className="panel-page-subtitle">{currentMeta.subtitle}</p>
+          </div>
+
+          <div className="panel-topbar-right">
+            <NotificationBanner userEmail={user.email} />
+            <div className="panel-profile">
+              <div className="panel-avatar">{safeText(user.name).slice(0, 2).toUpperCase()}</div>
+              <div className="panel-profile-copy">
+                <strong>{user.name}</strong>
+                <span>{user.email}</span>
               </div>
             </div>
+          </div>
+        </header>
 
-            {/* Rejected banner */}
-            {stats.rejected > 0 && (
-              <div style={{ background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:'10px', padding:'12px 18px', marginBottom:'20px', fontSize:'13px', color:'#b91c1c', fontWeight:600 }}>
-                {stats.rejected} event{stats.rejected>1?'s were':' was'} rejected. Check the rejection reason and edit to resubmit.
-              </div>
-            )}
+        <main className="panel-content">
+          {activeTab === 'dashboard' ? (
+            <>
+              <section className="panel-spotlight">
+                <div className="panel-spotlight-copy">
+                  <p className="panel-kicker">Society event workspace</p>
+                  <h2>Create, track, and refine your events in the same Uni-Connect design system.</h2>
+                  <p>
+                    The society dashboard now follows the shared admin-style UI, so your event planning,
+                    status tracking, and scheduling experience feels connected to the rest of the platform.
+                  </p>
+                </div>
 
-            {loading ? (
-              <div style={{ textAlign:'center', color:'#94a3b8', padding:'60px', fontSize:'15px' }}>Loading your events...</div>
-            ) : filtered.length === 0 ? (
-              <div style={{ textAlign:'center', padding:'60px', background:'#fff', borderRadius:'14px', border:'1px dashed #e2e8f0', color:'#94a3b8' }}>
-                <div style={{ fontSize:'40px', marginBottom:'12px' }}>📭</div>
-                <p style={{ fontSize:'16px', fontWeight:600 }}>{search ? 'No events match your search' : filter==='all'?'No events yet':'No '+filter+' events'}</p>
-                {!search && filter==='all' && <p style={{ fontSize:'13px', marginTop:'6px' }}>Click "Create Event" in the sidebar to get started</p>}
-              </div>
-            ) : (
-              filtered.map(ev => (
-                <EventCard
-                  key={ev._id}
-                  event={ev}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onGeneratePost={setPostEvent}
-                />
-              ))
-            )}
-          </>
-        )}
+                <div className="panel-spotlight-stats">
+                  {spotlightStats.map(item => (
+                    <div key={item.label} className="panel-spotlight-stat">
+                      <strong style={{ color: item.accent }}>{item.value}</strong>
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
 
-        {/* CREATE / EDIT TAB */}
-        {activeTab === 'create' && (
-          <EventForm
-            onSubmit={editData ? handleUpdate : handleCreate}
-            editData={editData}
-            onCancelEdit={() => { setEditData(null); setActiveTab('dashboard'); }}
-            bookedDates={bookedDates}
-            currentUser={user}
-          />
-        )}
+              <section className="panel-stat-grid">
+                {statCards.map(card => (
+                  <StatCard
+                    key={card.label}
+                    active={filter === card.filterValue}
+                    accent={card.accent}
+                    soft={card.soft}
+                    label={card.label}
+                    note={card.note}
+                    short={card.short}
+                    value={card.value}
+                    onClick={() => setFilter(card.filterValue)}
+                  />
+                ))}
+              </section>
 
-        {/* CALENDAR TAB */}
-        {activeTab === 'calendar' && <EventCalendar events={events} />}
+              <section className="panel-control-card">
+                <div className="panel-control-row">
+                  <input
+                    className="panel-search-input"
+                    value={search}
+                    onChange={event => setSearch(event.target.value)}
+                    placeholder="Search by title, venue, or category"
+                  />
+                  <div className="panel-filter-group">
+                    {['all', 'pending', 'approved', 'rejected'].map(item => (
+                      <button
+                        key={item}
+                        type="button"
+                        className={`panel-filter-button${filter === item ? ' is-active' : ''}`}
+                        onClick={() => setFilter(item)}
+                      >
+                        {item === 'all' ? `All (${stats.total})` : item.charAt(0).toUpperCase() + item.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </section>
 
-      </main>
+              {stats.rejected > 0 ? (
+                <div className="panel-banner danger">
+                  {stats.rejected} {stats.rejected === 1 ? 'event was' : 'events were'} rejected.
+                  Review the admin reason, update the details, and resubmit when ready.
+                </div>
+              ) : null}
 
-      <style>{`
-        @keyframes slideIn { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:translateX(0); } }
-        button:hover { opacity: 0.88; }
-      `}</style>
+              {loading ? (
+                <section className="panel-loading">
+                  <h3>Loading your society events</h3>
+                  <p>Fetching the latest submissions, approval updates, and schedule changes.</p>
+                </section>
+              ) : filtered.length === 0 ? (
+                <section className="panel-empty">
+                  <h3>{search ? 'No events match your search' : 'No events yet'}</h3>
+                  <p>
+                    {search
+                      ? 'Try a broader search term or switch the current status filter.'
+                      : 'Open the Create Event tab to prepare your first event submission.'}
+                  </p>
+                </section>
+              ) : (
+                filtered.map(event => (
+                  <EventCard
+                    key={event._id}
+                    event={event}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onGeneratePost={setPostEvent}
+                  />
+                ))
+              )}
+            </>
+          ) : null}
+
+          {activeTab === 'create' ? (
+            <EventForm
+              onSubmit={editData ? handleUpdate : handleCreate}
+              editData={editData}
+              onCancelEdit={() => {
+                setEditData(null);
+                setActiveTab('dashboard');
+              }}
+              bookedDates={bookedDates}
+              currentUser={user}
+            />
+          ) : null}
+
+          {activeTab === 'calendar' ? <EventCalendar events={events} /> : null}
+        </main>
+      </div>
     </div>
   );
 }

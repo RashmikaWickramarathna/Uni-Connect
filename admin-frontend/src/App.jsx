@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import AdminEventCard from './components/AdminEventCard';
+import React, { useEffect, useState } from 'react';
 import AdminCalendar from './components/AdminCalendar';
+import AdminEventCard from './components/AdminEventCard';
 import Analytics from './components/Analytics';
-import Reminders from './components/Reminders';
 import ReasonModal from './components/ReasonModal';
-import { getAllEvents, approveEvent, rejectEvent, deleteEvent } from './api';
+import Reminders from './components/Reminders';
+import { approveEvent, deleteEvent, getAllEvents, rejectEvent } from './api';
+import './dashboardTheme.css';
 
 const safeText = value => String(value ?? '');
 
@@ -31,6 +32,66 @@ const normalizeEvent = event => ({
   views: Number.isFinite(Number(event?.views)) ? Number(event.views) : 0,
 });
 
+const PAGE_META = {
+  dashboard: {
+    kicker: 'Uni-Connect admin workspace',
+    title: 'Event Management',
+    subtitle: 'Review submissions, keep the event pipeline moving, and notify societies from one place.',
+  },
+  analytics: {
+    kicker: 'Uni-Connect admin workspace',
+    title: 'Event Analytics',
+    subtitle: 'Track approval trends, activity by category, and the most active societies.',
+  },
+  reminders: {
+    kicker: 'Uni-Connect admin workspace',
+    title: 'Reminder Center',
+    subtitle: 'Monitor upcoming approved events and the reminder emails sent to societies.',
+  },
+  calendar: {
+    kicker: 'Uni-Connect admin workspace',
+    title: 'Calendar View',
+    subtitle: 'Scan the full event schedule with a cleaner, shared Uni-Connect dashboard shell.',
+  },
+};
+
+const TABS = [
+  { key: 'dashboard', label: 'Events', note: 'Review queue', short: 'EV' },
+  { key: 'analytics', label: 'Analytics', note: 'Trends and totals', short: 'AN' },
+  { key: 'reminders', label: 'Reminders', note: 'Email timeline', short: 'RM' },
+  { key: 'calendar', label: 'Calendar', note: 'Schedule view', short: 'CL' },
+];
+
+function SidebarNavItem({ active, badge, label, note, short, onClick }) {
+  return (
+    <button type="button" className={`panel-nav-item${active ? ' active' : ''}`} onClick={onClick}>
+      <span className="panel-nav-icon">{short}</span>
+      <span className="panel-nav-copy">
+        <strong>{label}</strong>
+        <span>{note}</span>
+      </span>
+      {badge > 0 ? <span className="panel-nav-badge">{badge}</span> : null}
+    </button>
+  );
+}
+
+function StatCard({ active, accent, soft, label, note, short, value, onClick }) {
+  return (
+    <article
+      className={`panel-stat-card${active ? ' is-active' : ''}`}
+      style={{ '--stat-accent': accent, '--stat-soft': soft }}
+      onClick={onClick}
+    >
+      <div className="panel-stat-card-header">
+        <span className="panel-stat-icon">{short}</span>
+        <div className="panel-stat-value">{value}</div>
+      </div>
+      <div className="panel-stat-label">{label}</div>
+      <div className="panel-stat-note">{note}</div>
+    </article>
+  );
+}
+
 export default function App() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,13 +102,21 @@ export default function App() {
   const [rejectModal, setRejectModal] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
 
-  const showToast = (msg, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null),4000); };
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const fetchEvents = async (showLoading = true) => {
     if (showLoading) setLoading(true);
-    try { const r=await getAllEvents(); setEvents((r.data || []).map(normalizeEvent)); }
-    catch { showToast('Failed to load events.','error'); }
-    finally { if (showLoading) setLoading(false); }
+    try {
+      const response = await getAllEvents();
+      setEvents((response.data || []).map(normalizeEvent));
+    } catch {
+      showToast('Failed to load events.', 'error');
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -63,177 +132,303 @@ export default function App() {
 
   const handleApprove = async (id) => {
     try {
-      const r=await approveEvent(id);
-      setEvents(p=>p.map(e=>e._id===id?normalizeEvent(r.data):e));
-      showToast('Event approved! Society has been notified.');
-    } catch(err) { showToast(err.response?.data?.errors?.[0]||'Failed.','error'); }
+      const response = await approveEvent(id);
+      setEvents(previous =>
+        previous.map(event => (event._id === id ? normalizeEvent(response.data) : event))
+      );
+      showToast('Event approved and the society has been notified.');
+    } catch (err) {
+      showToast(err.response?.data?.errors?.[0] || 'Failed to approve the event.', 'error');
+    }
   };
 
   const handleRejectConfirm = async (reason) => {
     try {
-      const r=await rejectEvent(rejectModal._id,reason);
-      setEvents(p=>p.map(e=>e._id===rejectModal._id?normalizeEvent(r.data):e));
-      showToast('Event rejected. Society notified with reason.','warning');
-    } catch(err) { showToast(err.response?.data?.errors?.[0]||'Failed.','error'); }
-    finally { setRejectModal(null); }
+      const response = await rejectEvent(rejectModal._id, reason);
+      setEvents(previous =>
+        previous.map(event =>
+          event._id === rejectModal._id ? normalizeEvent(response.data) : event
+        )
+      );
+      showToast('Event rejected and the society received your reason.', 'warning');
+    } catch (err) {
+      showToast(err.response?.data?.errors?.[0] || 'Failed to reject the event.', 'error');
+    } finally {
+      setRejectModal(null);
+    }
   };
 
   const handleDeleteConfirm = async (reason) => {
     try {
-      await deleteEvent(deleteModal._id,reason);
-      setEvents(p=>p.filter(e=>e._id!==deleteModal._id));
-      showToast('Event deleted. Society notified.','warning');
-    } catch(err) { showToast(err.response?.data?.errors?.[0]||'Failed.','error'); }
-    finally { setDeleteModal(null); }
+      await deleteEvent(deleteModal._id, reason);
+      setEvents(previous => previous.filter(event => event._id !== deleteModal._id));
+      showToast('Event deleted and the society has been notified.', 'warning');
+    } catch (err) {
+      showToast(err.response?.data?.errors?.[0] || 'Failed to delete the event.', 'error');
+    } finally {
+      setDeleteModal(null);
+    }
   };
 
   const stats = {
-    total:    events.length,
-    pending:  events.filter(e=>e.status==='pending').length,
-    approved: events.filter(e=>e.status==='approved').length,
-    rejected: events.filter(e=>e.status==='rejected').length,
+    total: events.length,
+    pending: events.filter(event => event.status === 'pending').length,
+    approved: events.filter(event => event.status === 'approved').length,
+    rejected: events.filter(event => event.status === 'rejected').length,
   };
 
-  let filtered = filter==='all' ? events : events.filter(e=>e.status===filter);
+  let filtered = filter === 'all' ? events : events.filter(event => event.status === filter);
   if (search.trim()) {
     const searchValue = search.toLowerCase();
-    filtered = filtered.filter(e=>
-      safeText(e.title).toLowerCase().includes(searchValue) ||
-      safeText(e.organizer).toLowerCase().includes(searchValue) ||
-      safeText(e.venue).toLowerCase().includes(searchValue) ||
-      safeText(e.organizerEmail).toLowerCase().includes(searchValue)
+    filtered = filtered.filter(event =>
+      safeText(event.title).toLowerCase().includes(searchValue) ||
+      safeText(event.organizer).toLowerCase().includes(searchValue) ||
+      safeText(event.venue).toLowerCase().includes(searchValue) ||
+      safeText(event.organizerEmail).toLowerCase().includes(searchValue)
     );
   }
 
-  const tabs = [
-    {key:'dashboard',label:'Event Management'},
-    {key:'analytics',label:'Analytics'},
-    {key:'reminders',label:'Reminders'},
-    {key:'calendar', label:'Calendar'},
+  const spotlightStats = [
+    { label: 'Awaiting Review', value: stats.pending, accent: '#f59e0b' },
+    { label: 'Approved', value: stats.approved, accent: '#10b981' },
+    { label: 'Rejected', value: stats.rejected, accent: '#ef4444' },
   ];
 
-  const tStyle = t => t==='error'
-    ? {bg:'#fef2f2',border:'#fca5a5',color:'#b91c1c'}
-    : t==='warning'
-    ? {bg:'#fffbeb',border:'#fcd34d',color:'#92400e'}
-    : {bg:'#f0fdf4',border:'#86efac',color:'#15803d'};
+  const statCards = [
+    {
+      label: 'Total Events',
+      note: 'Every submission in the moderation pipeline.',
+      value: stats.total,
+      accent: '#2563eb',
+      soft: 'rgba(37, 99, 235, 0.12)',
+      short: 'ALL',
+      filterValue: 'all',
+    },
+    {
+      label: 'Pending Review',
+      note: 'Items still waiting for an admin decision.',
+      value: stats.pending,
+      accent: '#f59e0b',
+      soft: 'rgba(245, 158, 11, 0.16)',
+      short: 'PEN',
+      filterValue: 'pending',
+    },
+    {
+      label: 'Approved',
+      note: 'Confirmed events already released to societies.',
+      value: stats.approved,
+      accent: '#10b981',
+      soft: 'rgba(16, 185, 129, 0.14)',
+      short: 'APP',
+      filterValue: 'approved',
+    },
+    {
+      label: 'Rejected',
+      note: 'Entries that still need society-side changes.',
+      value: stats.rejected,
+      accent: '#ef4444',
+      soft: 'rgba(239, 68, 68, 0.14)',
+      short: 'REJ',
+      filterValue: 'rejected',
+    },
+  ];
+
+  const currentMeta = PAGE_META[activeTab];
 
   return (
-    <div style={{minHeight:'100vh',background:'#f8fafc',display:'flex'}}>
+    <div className="panel-shell">
+      {toast ? <div className={`panel-toast ${toast.type || 'success'}`}>{toast.msg}</div> : null}
 
-      {/* Toast */}
-      {toast&&(()=>{const ts=tStyle(toast.type);return(
-        <div style={{position:'fixed',top:'20px',right:'20px',zIndex:9999,background:ts.bg,border:`1px solid ${ts.border}`,borderRadius:'10px',padding:'12px 20px',color:ts.color,fontSize:'14px',fontWeight:600,boxShadow:'0 4px 20px rgba(0,0,0,0.08)',animation:'slideIn 0.3s ease',maxWidth:'380px'}}>
-          {toast.msg}
+      {rejectModal ? (
+        <ReasonModal
+          type="reject"
+          eventTitle={rejectModal.title}
+          onConfirm={handleRejectConfirm}
+          onCancel={() => setRejectModal(null)}
+        />
+      ) : null}
+
+      {deleteModal ? (
+        <ReasonModal
+          type="delete"
+          eventTitle={deleteModal.title}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteModal(null)}
+        />
+      ) : null}
+
+      <aside className="panel-sidebar">
+        <div className="panel-brand">
+          <div className="panel-brand-mark">UC</div>
+          <div className="panel-brand-copy">
+            <div className="panel-brand-title">Uni-Connect</div>
+            <div className="panel-brand-sub">Admin event panel</div>
+          </div>
         </div>
-      );})()}
 
-      {/* Modals */}
-      {rejectModal&&<ReasonModal type="reject" eventTitle={rejectModal.title} onConfirm={handleRejectConfirm} onCancel={()=>setRejectModal(null)}/>}
-      {deleteModal&&<ReasonModal type="delete" eventTitle={deleteModal.title} onConfirm={handleDeleteConfirm} onCancel={()=>setDeleteModal(null)}/>}
-
-      {/* Sidebar */}
-      <aside style={{width:'230px',background:'#fff',borderRight:'1px solid #e2e8f0',padding:'28px 16px',display:'flex',flexDirection:'column',position:'fixed',top:0,left:0,bottom:0,boxShadow:'2px 0 8px rgba(0,0,0,0.04)',zIndex:100}}>
-        <div style={{marginBottom:'32px',paddingLeft:'8px'}}>
-          <div style={{fontFamily:'Syne, sans-serif',fontSize:'22px',fontWeight:800,color:'#0f172a'}}>UniEvents</div>
-          <div style={{fontSize:'11px',color:'#dc2626',fontWeight:700,letterSpacing:'0.05em',marginTop:'2px'}}>ADMIN PANEL</div>
-        </div>
-
-        {tabs.map(t=>(
-          <button key={t.key} onClick={()=>setActiveTab(t.key)}
-            style={{display:'flex',alignItems:'center',padding:'10px 14px',borderRadius:'8px',border:'none',cursor:'pointer',textAlign:'left',background:activeTab===t.key?'#eff6ff':'transparent',color:activeTab===t.key?'#2563eb':'#64748b',fontFamily:'Space Grotesk, sans-serif',fontSize:'14px',fontWeight:600,borderLeft:activeTab===t.key?'3px solid #2563eb':'3px solid transparent',marginBottom:'4px',transition:'all 0.15s'}}>
-            {t.label}
-            {t.key==='dashboard'&&stats.pending>0&&<span style={{marginLeft:'auto',background:'#dc2626',color:'#fff',borderRadius:'50%',fontSize:'11px',fontWeight:700,width:'18px',height:'18px',display:'flex',alignItems:'center',justifyContent:'center'}}>{stats.pending}</span>}
-          </button>
-        ))}
-
-        {/* Stats */}
-        <div style={{marginTop:'auto',padding:'16px',background:'#f8fafc',borderRadius:'10px',border:'1px solid #e2e8f0'}}>
-          <div style={{fontSize:'10px',color:'#94a3b8',marginBottom:'10px',fontWeight:700,letterSpacing:'0.08em'}}>OVERVIEW</div>
-          {[['Total',stats.total,'#2563eb'],['Pending',stats.pending,'#d97706'],['Approved',stats.approved,'#16a34a'],['Rejected',stats.rejected,'#dc2626']].map(([l,v,c])=>(
-            <div key={l} style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'6px'}}>
-              <span style={{fontSize:'13px',color:'#64748b'}}>{l}</span>
-              <span style={{fontSize:'13px',fontWeight:700,color:'#fff',background:c,borderRadius:'20px',padding:'1px 10px',minWidth:'26px',textAlign:'center'}}>{v}</span>
-            </div>
+        <nav className="panel-nav" aria-label="Admin navigation">
+          {TABS.map(tab => (
+            <SidebarNavItem
+              key={tab.key}
+              active={activeTab === tab.key}
+              badge={tab.key === 'dashboard' ? stats.pending : 0}
+              label={tab.label}
+              note={tab.note}
+              short={tab.short}
+              onClick={() => setActiveTab(tab.key)}
+            />
           ))}
+        </nav>
+
+        <div className="panel-sidebar-card">
+          <h3>Queue overview</h3>
+          <p>Keep the event review flow moving with a layout that now matches the main Uni-Connect admin style.</p>
+          <div className="panel-sidebar-stats">
+            <div className="panel-sidebar-stat">
+              <strong>{stats.pending}</strong>
+              <span>Pending</span>
+            </div>
+            <div className="panel-sidebar-stat">
+              <strong>{stats.approved}</strong>
+              <span>Approved</span>
+            </div>
+            <div className="panel-sidebar-stat">
+              <strong>{stats.rejected}</strong>
+              <span>Rejected</span>
+            </div>
+            <div className="panel-sidebar-stat">
+              <strong>{stats.total}</strong>
+              <span>Total</span>
+            </div>
+          </div>
         </div>
       </aside>
 
-      {/* Main */}
-      <main style={{marginLeft:'230px',padding:'36px 40px',flex:1}}>
-        <div style={{marginBottom:'28px',paddingBottom:'20px',borderBottom:'1px solid #e2e8f0'}}>
-          <h1 style={{fontFamily:'Syne, sans-serif',fontSize:'26px',fontWeight:800,color:'#0f172a'}}>
-            {{dashboard:'Event Management',analytics:'Analytics',reminders:'Reminders',calendar:'Calendar'}[activeTab]}
-          </h1>
-          <p style={{color:'#94a3b8',marginTop:'4px',fontSize:'14px'}}>Admin Panel — University Event Management System</p>
-        </div>
+      <div className="panel-main">
+        <header className="panel-topbar">
+          <div className="panel-topbar-copy">
+            <p className="panel-kicker">{currentMeta.kicker}</p>
+            <h1 className="panel-page-title">{currentMeta.title}</h1>
+            <p className="panel-page-subtitle">{currentMeta.subtitle}</p>
+          </div>
 
-        {/* DASHBOARD */}
-        {activeTab==='dashboard'&&(
-          <>
-            {/* Stat cards — clickable to filter */}
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'16px',marginBottom:'28px'}}>
-              {[
-                {label:'Total Events',value:stats.total,color:'#2563eb',f:'all'},
-                {label:'Pending Review',value:stats.pending,color:'#d97706',f:'pending'},
-                {label:'Approved',value:stats.approved,color:'#16a34a',f:'approved'},
-                {label:'Rejected',value:stats.rejected,color:'#dc2626',f:'rejected'},
-              ].map(s=>(
-                <div key={s.label} onClick={()=>setFilter(s.f)} style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:'12px',padding:'20px 22px',boxShadow:'0 1px 4px rgba(0,0,0,0.04)',borderTop:`3px solid ${s.color}`,cursor:'pointer',transition:'box-shadow 0.2s'}}
-                  onMouseEnter={e=>e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'}
-                  onMouseLeave={e=>e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.04)'}>
-                  <div style={{fontSize:'28px',fontWeight:800,color:s.color,fontFamily:'Syne, sans-serif'}}>{s.value}</div>
-                  <div style={{fontSize:'13px',color:'#64748b',marginTop:'4px'}}>{s.label}</div>
+          <div className="panel-topbar-right">
+            <div className="panel-status-chip">
+              {stats.pending} {stats.pending === 1 ? 'event needs' : 'events need'} review
+            </div>
+            <div className="panel-profile">
+              <div className="panel-avatar">AD</div>
+              <div className="panel-profile-copy">
+                <strong>Admin Team</strong>
+                <span>events@uni-connect.local</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="panel-content">
+          {activeTab === 'dashboard' ? (
+            <>
+              <section className="panel-spotlight">
+                <div className="panel-spotlight-copy">
+                  <p className="panel-kicker">Moderation focus</p>
+                  <h2>Review event submissions in the same shell used across the rest of Uni-Connect.</h2>
+                  <p>
+                    The admin panel now follows the shared product styling, so approvals, rejections,
+                    and schedule reviews feel consistent with the main application.
+                  </p>
                 </div>
-              ))}
-            </div>
 
-            {/* Search + filter */}
-            <div style={{display:'flex',gap:'12px',marginBottom:'20px',flexWrap:'wrap',alignItems:'center'}}>
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by title, society, venue, email..."
-                style={{flex:1,minWidth:'200px',padding:'9px 14px',border:'1px solid #e2e8f0',borderRadius:'8px',fontSize:'14px',color:'#0f172a',fontFamily:'Space Grotesk, sans-serif',outline:'none',background:'#fff'}}/>
-              <div style={{display:'flex',gap:'6px'}}>
-                {['all','pending','approved','rejected'].map(f=>(
-                  <button key={f} onClick={()=>setFilter(f)} style={{padding:'7px 14px',borderRadius:'6px',border:filter===f?'1px solid #2563eb':'1px solid #e2e8f0',background:filter===f?'#2563eb':'#fff',color:filter===f?'#fff':'#64748b',fontSize:'13px',fontWeight:600,fontFamily:'Space Grotesk, sans-serif',cursor:'pointer',transition:'all 0.15s'}}>
-                    {f==='all'?`All (${stats.total})`:f.charAt(0).toUpperCase()+f.slice(1)}
-                  </button>
+                <div className="panel-spotlight-stats">
+                  {spotlightStats.map(item => (
+                    <div key={item.label} className="panel-spotlight-stat">
+                      <strong style={{ color: item.accent }}>{item.value}</strong>
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="panel-stat-grid">
+                {statCards.map(card => (
+                  <StatCard
+                    key={card.label}
+                    active={filter === card.filterValue}
+                    accent={card.accent}
+                    soft={card.soft}
+                    label={card.label}
+                    note={card.note}
+                    short={card.short}
+                    value={card.value}
+                    onClick={() => setFilter(card.filterValue)}
+                  />
                 ))}
-              </div>
-            </div>
+              </section>
 
-            {stats.pending>0&&filter==='all'&&(
-              <div style={{background:'#fffbeb',border:'1px solid #fcd34d',borderRadius:'10px',padding:'12px 18px',marginBottom:'20px',fontSize:'13px',color:'#92400e',fontWeight:600}}>
-                {stats.pending} event{stats.pending>1?'s':''} waiting for your review. Approve or reject with a reason — the society will be notified automatically.
-              </div>
-            )}
+              <section className="panel-control-card">
+                <div className="panel-control-row">
+                  <input
+                    className="panel-search-input"
+                    value={search}
+                    onChange={event => setSearch(event.target.value)}
+                    placeholder="Search by title, society, venue, or organizer email"
+                  />
+                  <div className="panel-filter-group">
+                    {['all', 'pending', 'approved', 'rejected'].map(item => (
+                      <button
+                        key={item}
+                        type="button"
+                        className={`panel-filter-button${filter === item ? ' is-active' : ''}`}
+                        onClick={() => setFilter(item)}
+                      >
+                        {item === 'all' ? `All (${stats.total})` : item.charAt(0).toUpperCase() + item.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </section>
 
-            {loading?(
-              <div style={{textAlign:'center',color:'#94a3b8',padding:'60px',fontSize:'15px'}}>Loading events...</div>
-            ):filtered.length===0?(
-              <div style={{textAlign:'center',padding:'60px',background:'#fff',borderRadius:'14px',border:'1px dashed #e2e8f0',color:'#94a3b8'}}>
-                <div style={{fontSize:'40px',marginBottom:'12px'}}>📭</div>
-                <p style={{fontSize:'16px',fontWeight:600}}>{search?'No events match your search':'No events found'}</p>
-              </div>
-            ):filtered.map(ev=>(
-              <AdminEventCard key={ev._id} event={ev}
-                onApprove={handleApprove}
-                onReject={setRejectModal}
-                onDelete={setDeleteModal}
-                onEdit={()=>{}}
-              />
-            ))}
-          </>
-        )}
+              {stats.pending > 0 && filter === 'all' ? (
+                <div className="panel-banner warning">
+                  {stats.pending} {stats.pending === 1 ? 'event is' : 'events are'} waiting for your decision.
+                  Approve or reject with a reason and the society will be notified automatically.
+                </div>
+              ) : null}
 
-        {activeTab==='analytics'&&<Analytics/>}
-        {activeTab==='reminders'&&<Reminders events={events}/>}
-        {activeTab==='calendar' &&<AdminCalendar events={events}/>}
-      </main>
+              {loading ? (
+                <section className="panel-loading">
+                  <h3>Loading event queue</h3>
+                  <p>Fetching the latest submissions and moderation state for the admin panel.</p>
+                </section>
+              ) : filtered.length === 0 ? (
+                <section className="panel-empty">
+                  <h3>{search ? 'No events match your search' : 'Nothing to review right now'}</h3>
+                  <p>
+                    {search
+                      ? 'Try a broader search term or switch the filter state to see more events.'
+                      : 'When societies create or update events, they will appear here for review.'}
+                  </p>
+                </section>
+              ) : (
+                filtered.map(event => (
+                  <AdminEventCard
+                    key={event._id}
+                    event={event}
+                    onApprove={handleApprove}
+                    onReject={setRejectModal}
+                    onDelete={setDeleteModal}
+                    onEdit={() => {}}
+                  />
+                ))
+              )}
+            </>
+          ) : null}
 
-      <style>{`
-        @keyframes slideIn { from{opacity:0;transform:translateX(16px);}to{opacity:1;transform:translateX(0);} }
-        button:hover{opacity:0.88;}
-      `}</style>
+          {activeTab === 'analytics' ? <Analytics /> : null}
+          {activeTab === 'reminders' ? <Reminders events={events} /> : null}
+          {activeTab === 'calendar' ? <AdminCalendar events={events} /> : null}
+        </main>
+      </div>
     </div>
   );
 }
