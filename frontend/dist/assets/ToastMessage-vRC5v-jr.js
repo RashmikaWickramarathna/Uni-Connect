@@ -1,1 +1,0 @@
-import{t as e}from"./jsx-runtime-Bg_NI1en.js";var t=e();function n({type:e=`info`,message:n,onClose:r}){return n?(0,t.jsxs)(`div`,{className:`toast toast-${e}`,children:[(0,t.jsx)(`span`,{children:n}),(0,t.jsx)(`button`,{onClick:r,children:`×`})]}):null}export{n as t};
