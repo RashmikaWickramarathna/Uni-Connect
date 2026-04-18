@@ -6,7 +6,7 @@ import "../styles/admin.css";
 
 const menuItems = [
   { label: "Dashboard", icon: FiHome, path: "/admin" },
-  { label: "User Accounts", icon: FiUsers, disabled: true },
+  { label: "User Accounts", icon: FiUsers, path: "/admin-login/login" },
   { label: "Society Approvals", icon: FiClipboard, path: "/society-admin/requests" },
   { label: "Events", icon: FiCalendar, path: "/admin/events" },
   { label: "Ticket Reservations", icon: FiFileText, path: "/admin/bookings" },
