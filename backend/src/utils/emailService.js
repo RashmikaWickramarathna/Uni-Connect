@@ -26,7 +26,13 @@ const verifyTransporter = async () =>
     });
   });
 
-const sendApprovalEmail = async (to, societyName, registrationLink, eventLink) => {
+const sendApprovalEmail = async (
+  to,
+  societyName,
+  registrationLink,
+  eventLink,
+  loginLink
+) => {
   const eventSection = eventLink
     ? `
             <h3>Step 2: Create Your First Event</h3>
@@ -36,9 +42,18 @@ const sendApprovalEmail = async (to, societyName, registrationLink, eventLink) =
         `
     : "";
 
+  const loginSection = loginLink
+    ? `
+            <h3>${eventLink ? "Step 3" : "Step 2"}: Sign In to the Society Portal</h3>
+            <p>After you create the password, use your official email and that same password to log in and manage events:</p>
+            <a href="${loginLink}" class="button">Open Society Login</a>
+            <p><small>${loginLink}</small></p>
+        `
+    : "";
+
   const noteText = eventLink
-    ? "Both links expire in 24-48 hours. Contact admin if you need extension."
-    : "The registration link expires in 24-48 hours. Contact admin if you need extension.";
+    ? "Registration and event access links expire in 24-48 hours. Contact admin if you need extension."
+    : "The registration link expires in 24-48 hours. After registration, keep using your official email and chosen password to sign in.";
 
   const htmlBody = `
         <!DOCTYPE html>
@@ -56,10 +71,11 @@ const sendApprovalEmail = async (to, societyName, registrationLink, eventLink) =
             <h2>Congratulations! Your society <strong>${societyName}</strong> has been approved!</h2>
             <p>You now have access to UNI-CONNECT platform.</p>
             <h3>Step 1: Complete Society Registration</h3>
-            <p>Create your society account:</p>
+            <p>Open the registration link below and create the password for your society account:</p>
             <a href="${registrationLink}" class="button">Register Society Account</a>
             <p><small>${registrationLink}</small></p>
             ${eventSection}
+            ${loginSection}
             <p><strong>Note:</strong> ${noteText}</p>
             <hr>
             <p>Best regards,<br>UNI-CONNECT Team</p>

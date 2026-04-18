@@ -99,7 +99,7 @@ export default function SocietyRequestDetail() {
 
               {request.status === "Approved" && (
                 <button className="btn primary" type="button" onClick={handleSendEventLink} disabled={sendingEventLink}>
-                  {sendingEventLink ? "Sending..." : "Send Event Link"}
+                  {sendingEventLink ? "Sending..." : "Send Legacy Event Link"}
                 </button>
               )}
             </div>
@@ -153,8 +153,13 @@ export default function SocietyRequestDetail() {
 
             <section className="detail-panel">
               <div className="detail-panel-header">
-                <h3 className="detail-panel-title">Event Access</h3>
+                <h3 className="detail-panel-title">Society Portal Access</h3>
               </div>
+
+              <p className="section-sub">
+                Primary flow: the society creates a password from the approval email, then signs in with the
+                official email through the society login page. The legacy event link below is optional.
+              </p>
 
               {request.eventAccessLink ? (
                 <div className="detail-meta-grid">
@@ -174,7 +179,7 @@ export default function SocietyRequestDetail() {
                   </div>
                 </div>
               ) : (
-                <p className="section-sub">No event access link has been sent for this society yet.</p>
+                <p className="section-sub">No legacy event access link has been sent for this society yet.</p>
               )}
             </section>
 

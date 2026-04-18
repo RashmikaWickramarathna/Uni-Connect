@@ -62,8 +62,13 @@ export default function ApprovalRegistration({ token, onRegistered, onDismiss })
 
       onRegistered?.({
         message: payload.message || 'Society account created successfully.',
-        societyName: requestData?.societyName,
-        officialEmail: requestData?.officialEmail,
+        account: payload.data || {
+          societyName: requestData?.societyName,
+          officialEmail: requestData?.officialEmail,
+          category: requestData?.category,
+          faculty: requestData?.faculty,
+          role: 'society',
+        },
       });
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed.');
@@ -79,7 +84,8 @@ export default function ApprovalRegistration({ token, onRegistered, onDismiss })
           <div style={eyebrow}>UNI-CONNECT</div>
           <h1 style={title}>Register Society Account</h1>
           <p style={subtitle}>
-            Complete the final step from your approval email to activate your society portal.
+            Complete the final step from your approval email. The password you create here will be the same one
+            you use with the official society email to sign in later.
           </p>
         </div>
 

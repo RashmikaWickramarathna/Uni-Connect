@@ -116,6 +116,7 @@ const approveSociety = async (req, res) => {
     await approvalToken.save();
 
     const link = buildRegistrationLink(token);
+    const loginLink = `${getMainFrontendUrl()}/social-login`;
 
     society.status = "Approved";
     society.approvalToken = token;
@@ -127,7 +128,9 @@ const approveSociety = async (req, res) => {
       await sendApprovalEmail(
         officialEmail,
         society.societyName || society.name || "Society",
-        link
+        link,
+        null,
+        loginLink
       );
 
       return res.json({

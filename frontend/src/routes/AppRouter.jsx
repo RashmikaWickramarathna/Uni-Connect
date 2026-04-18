@@ -102,7 +102,7 @@ export default function AppRouter() {
 
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/admin-login" element={<PublicRoute><AdminLogin /></PublicRoute>} />
-        <Route path="/social-login" element={<PublicRoute><SocialLogin /></PublicRoute>} />
+        <Route path="/social-login" element={<SocialLogin />} />
         <Route path="/social-dashboard" element={<SocialDashboard />} />
         <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />

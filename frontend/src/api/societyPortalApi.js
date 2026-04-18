@@ -56,3 +56,6 @@ export const registerApprovedSociety = (payload) =>
   apiClient.post("/society-requests/register-approved", payload, {
     headers: authHeaders(),
   });
+
+export const loginSociety = (payload) =>
+  apiClient.post("/society-auth/login", payload);

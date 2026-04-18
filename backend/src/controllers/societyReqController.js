@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const ApprovalToken = require("../models/approvalToken");
 const Society = require("../models/society");
+const { serializeSocietyAccount } = require("../utils/societyAccount");
 
 const createSocietyRequest = async (req, res) => {
   try {
@@ -196,7 +197,7 @@ const registerApprovedSociety = async (req, res) => {
 
     return res.status(201).json({
       message: "Society account created successfully",
-      data: society,
+      data: serializeSocietyAccount(society),
     });
   } catch (error) {
     console.error("REGISTER APPROVED SOCIETY ERROR:", error);

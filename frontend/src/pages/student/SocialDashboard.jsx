@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ApprovalRegistration from '../../components/society/ApprovalRegistration';
 import EventCalendar from '../../components/society/EventCalendar';
 import EventCard from '../../components/society/EventCard';
@@ -11,61 +12,14 @@ import {
   getSocietyEvents,
   updateEvent,
 } from '../../api/societyPortalApi';
+import {
+  clearStoredSocietyUser,
+  readStoredSocietyUser,
+  storeSocietyUser,
+} from '../../utils/societySession';
 import '../../styles/societyPortal.css';
 
-const DEMO_USER = {
-  name: 'Computer Science Society',
-  email: 'cssociety@university.edu',
-  role: 'society',
-};
-
-const SOCIETY_USER_KEY = 'societyUser';
-
 const safeText = (value) => String(value ?? '');
-
-const normalizeStoredSocietyUser = (value, allowLoose = false) => {
-  if (!value || typeof value !== 'object') return null;
-
-  const role = safeText(value.role).trim().toLowerCase();
-  const name = safeText(value.societyName || value.organizer || value.name).trim();
-  const email = safeText(value.officialEmail || value.organizerEmail || value.email)
-    .trim()
-    .toLowerCase();
-
-  const looksLikeSociety =
-    allowLoose ||
-    role === 'society' ||
-    Boolean(value.societyName) ||
-    Boolean(value.officialEmail) ||
-    Boolean(value.organizerEmail);
-
-  if (!looksLikeSociety || (!name && !email)) return null;
-
-  return {
-    name: name || DEMO_USER.name,
-    email: email || DEMO_USER.email,
-    role: 'society',
-  };
-};
-
-const getStoredUser = () => {
-  try {
-    const dedicatedUser = normalizeStoredSocietyUser(
-      JSON.parse(localStorage.getItem(SOCIETY_USER_KEY) || 'null'),
-      true
-    );
-    if (dedicatedUser) return dedicatedUser;
-
-    const sharedUser = normalizeStoredSocietyUser(
-      JSON.parse(localStorage.getItem('user') || 'null')
-    );
-    if (sharedUser) return sharedUser;
-  } catch {
-    return DEMO_USER;
-  }
-
-  return DEMO_USER;
-};
 
 const normalizeStatus = (status) => {
   const normalized = safeText(status).toLowerCase();
@@ -154,7 +108,8 @@ function StatCard({ active, accent, soft, label, note, short, value, onClick }) 
 }
 
 export default function SocialDashboard() {
-  const [user, setUser] = useState(getStoredUser);
+  const navigate = useNavigate();
+  const [user, setUser] = useState(() => readStoredSocietyUser());
   const [approvalToken, setApprovalToken] = useState(
     () => new URLSearchParams(window.location.search).get('approvalToken')
   );
@@ -178,19 +133,52 @@ export default function SocialDashboard() {
   };
 
   const handleRegistrationComplete = (registeredSociety) => {
-    const nextUser = {
-      name: registeredSociety?.societyName || DEMO_USER.name,
-      email: registeredSociety?.officialEmail || DEMO_USER.email,
-      role: 'society',
-    };
+    const nextUser = storeSocietyUser(registeredSociety?.account);
 
-    localStorage.setItem(SOCIETY_USER_KEY, JSON.stringify(nextUser));
+    if (!nextUser) {
+      showToast('Society account was created, but starting the session failed.', 'error');
+      clearApprovalToken();
+      navigate('/social-login', { replace: true });
+      return;
+    }
+
     setUser(nextUser);
     clearApprovalToken();
-    showToast(registeredSociety?.message || 'Society account created successfully.');
+    showToast(registeredSociety?.message || 'Society account created successfully. You are now signed in.');
   };
 
+  const handleLogout = () => {
+    clearStoredSocietyUser();
+    setUser(null);
+    navigate('/social-login', { replace: true });
+  };
+
+  useEffect(() => {
+    if (approvalToken) return;
+
+    const storedUser = readStoredSocietyUser();
+
+    if (!storedUser) {
+      navigate('/social-login', { replace: true });
+      return;
+    }
+
+    if (
+      !user ||
+      storedUser.email !== user.email ||
+      storedUser.name !== user.name ||
+      storedUser.id !== user.id
+    ) {
+      setUser(storedUser);
+    }
+  }, [approvalToken, navigate, user]);
+
   const fetchEvents = async (showLoading = true) => {
+    if (!user?.email) {
+      if (showLoading) setLoading(false);
+      return;
+    }
+
     if (showLoading) setLoading(true);
 
     try {
@@ -204,7 +192,7 @@ export default function SocialDashboard() {
   };
 
   useEffect(() => {
-    if (approvalToken) return undefined;
+    if (approvalToken || !user?.email) return undefined;
 
     fetchEvents();
 
@@ -214,7 +202,7 @@ export default function SocialDashboard() {
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [approvalToken, user.email, user.name]);
+  }, [approvalToken, user?.email, user?.name]);
 
   const handleCreate = async (formData) => {
     const response = await createEvent(withOwnedEventFields(formData, user));
@@ -328,6 +316,17 @@ export default function SocialDashboard() {
     title: activeTab === 'create' && editData ? 'Edit Event' : PAGE_META[pageKey].title,
   };
 
+  if (!approvalToken && !user) {
+    return (
+      <div className="society-dashboard-page">
+        <section className="panel-loading" style={{ margin: '24px' }}>
+          <h3>Redirecting to society login</h3>
+          <p>Loading the approved society account flow for this portal session.</p>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="society-dashboard-page">
       {approvalToken ? (
@@ -420,6 +419,9 @@ export default function SocialDashboard() {
 
               <div className="panel-topbar-right">
                 <NotificationBanner userEmail={user.email} />
+                <button type="button" className="panel-logout-button" onClick={handleLogout}>
+                  Sign Out
+                </button>
                 <div className="panel-profile">
                   <div className="panel-avatar">{safeText(user.name).slice(0, 2).toUpperCase()}</div>
                   <div className="panel-profile-copy">

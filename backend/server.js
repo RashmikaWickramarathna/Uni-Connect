@@ -13,6 +13,7 @@ const userRoutes = require("./src/routes/userRoutes");
 const adminUserRoutes = require("./src/routes/adminUserRoutes");
 const societyReqRoutes = require("./src/routes/societyReqRoutes");
 const societyApprovalRoutes = require("./src/routes/societyApprovalRoutes");
+const societyAuthRoutes = require("./src/routes/societyAuthRoutes");
 const eventRoutes = require("./src/routes/eventRoutes");
 const { verifyTransporter, sendApprovalEmail } = require("./src/utils/emailService");
 const { getRegistrationFrontendUrl } = require("./src/utils/frontendLinks");
@@ -54,6 +55,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/admin-users", adminUserRoutes);
 app.use("/api/society-requests", societyReqRoutes);
 app.use("/api/society-approval", societyApprovalRoutes);
+app.use("/api/society-auth", societyAuthRoutes);
 app.use("/api/events", eventRoutes);
 
 app.post("/api/test-email", async (req, res) => {

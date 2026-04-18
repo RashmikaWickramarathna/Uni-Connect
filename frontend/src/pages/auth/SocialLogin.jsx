@@ -17,15 +17,17 @@ import {
   AuthPrimaryButton,
   AuthUtilityLink,
 } from '../../components/auth/AuthPageLayout';
+import { loginSociety } from '../../api/societyPortalApi';
+import { storeSocietyUser } from '../../utils/societySession';
 
 const featurePoints = [
-  'Access your society workspace with a cleaner, focused sign-in experience',
-  'Review event, member, and request activity from one society dashboard',
-  'Move back to the main Uni-Connect login flow any time you need student access',
+  'Sign in with the official society email that was approved by the admin team',
+  'Use the same password you created from the approval email link to manage events',
+  'Open the same society dashboard for any approved club without needing a separate browser',
 ];
 
 export default function SocialLogin() {
-  const [username, setUsername] = useState('');
+  const [officialEmail, setOfficialEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,9 +38,20 @@ export default function SocialLogin() {
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
-      navigate('/social-dashboard');
-    }, 500);
+    try {
+      const response = await loginSociety({ officialEmail, password });
+      const nextUser = storeSocietyUser(response.data?.data || response.data);
+
+      if (!nextUser) {
+        throw new Error('Failed to store society session.');
+      }
+
+      navigate('/social-dashboard', { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to log in to the society portal.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -46,11 +59,11 @@ export default function SocialLogin() {
       brandTag="Society Workspace Access"
       showcaseTitle="Society"
       showcaseAccent="Login"
-      showcaseText="Use the same polished sign-in experience to enter the society side of Uni-Connect and continue into the social dashboard flow."
+      showcaseText="Use the official approved society email and the password created from the approval link to enter the society workspace."
       featurePoints={featurePoints}
       formTag="Society Login"
       formTitle="Welcome Back"
-      formSubtitle="Enter your society username and password to continue. This keeps the same style and flow as the main user login page."
+      formSubtitle="Enter the official society email and password to continue into the event management dashboard."
       footer={
         <>
           <AuthDivider />
@@ -58,8 +71,8 @@ export default function SocialLogin() {
             <AuthUtilityLink to="/login">Back to User Login</AuthUtilityLink>
           </AuthLinkRow>
           <AuthHelperNote>
-            This screen now uses the same updated blue auth styling as the user login page while preserving the
-            existing society dashboard redirect behavior.
+            After your society is approved, open the approval email once to create a password. From then on, use
+            that official email and password here.
           </AuthHelperNote>
         </>
       }
@@ -68,17 +81,17 @@ export default function SocialLogin() {
 
       <AuthForm onSubmit={handleSubmit}>
         <AuthInputBlock>
-          <AuthLabel htmlFor="username">Username</AuthLabel>
+          <AuthLabel htmlFor="officialEmail">Official Email</AuthLabel>
           <AuthInputFrame>
             <AuthInputIcon>
               <FiUser />
             </AuthInputIcon>
             <AuthInput
-              id="username"
-              type="text"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="officialEmail"
+              type="email"
+              placeholder="Enter your official society email"
+              value={officialEmail}
+              onChange={(e) => setOfficialEmail(e.target.value)}
               required
             />
           </AuthInputFrame>
