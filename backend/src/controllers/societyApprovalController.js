@@ -4,14 +4,10 @@ const ApprovalToken = require("../models/approvalToken");
 const Society = require("../models/society");
 const SocietyRequest = require("../models/societyRequest");
 const { sendApprovalEmail, sendEventAccessEmail } = require("../utils/emailService");
-
-const getRegistrationFrontendUrl = () =>
-  (process.env.REGISTRATION_FRONTEND_URL ||
-    process.env.SOCIETY_FRONTEND_URL ||
-    "http://localhost:3002").replace(/\/$/, "");
-
-const buildRegistrationLink = (token) =>
-  `${getRegistrationFrontendUrl()}/?approvalToken=${encodeURIComponent(token)}`;
+const {
+  buildRegistrationLink,
+  getMainFrontendUrl,
+} = require("../utils/frontendLinks");
 
 const verifyApprovalToken = async (req, res) => {
   try {
@@ -236,7 +232,7 @@ const sendEventLink = async (req, res) => {
     }
 
     const token = request.eventAccessToken || crypto.randomBytes(32).toString("hex");
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendUrl = getMainFrontendUrl();
     const eventLink = `${frontendUrl}/create-event/${token}`;
     const adminName = req.body?.adminName || "Admin";
 

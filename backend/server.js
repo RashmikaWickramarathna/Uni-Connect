@@ -15,6 +15,7 @@ const societyReqRoutes = require("./src/routes/societyReqRoutes");
 const societyApprovalRoutes = require("./src/routes/societyApprovalRoutes");
 const eventRoutes = require("./src/routes/eventRoutes");
 const { verifyTransporter, sendApprovalEmail } = require("./src/utils/emailService");
+const { getRegistrationFrontendUrl } = require("./src/utils/frontendLinks");
 
 if (!process.env.EMAIL_PASS && process.env.EMAIL_PASSWORD) {
   process.env.EMAIL_PASS = process.env.EMAIL_PASSWORD;
@@ -64,10 +65,7 @@ app.post("/api/test-email", async (req, res) => {
 
   const to = req.body?.to || process.env.EMAIL_USER;
   const societyName = req.body?.societyName || "Test Society";
-  const registrationFrontendUrl =
-    process.env.REGISTRATION_FRONTEND_URL ||
-    process.env.SOCIETY_FRONTEND_URL ||
-    "http://localhost:3002";
+  const registrationFrontendUrl = getRegistrationFrontendUrl();
   const link = req.body?.link || registrationFrontendUrl;
 
   if (!to) {
