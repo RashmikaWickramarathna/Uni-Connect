@@ -1,10 +1,11 @@
-import { FiHelpCircle, FiMessageSquare, FiUser } from 'react-icons/fi';
+import { FiCalendar, FiHelpCircle, FiMessageSquare, FiUser } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import './HeroSection.css';
 
 const HeroSection = () => {
   const navigate = useNavigate();
   const studentToolButtons = [
+    { label: 'Events', icon: FiCalendar, path: '/events' },
     { label: 'Feedbacks', icon: FiMessageSquare, path: '/my-feedbacks' },
     { label: 'Inquiries', icon: FiHelpCircle, path: '/my-inquiries' },
     { label: 'Profile', icon: FiUser, path: '/profile' },
@@ -47,14 +48,9 @@ const HeroSection = () => {
           
           <button 
             className="btn-secondary"
-            onClick={() => {
-              const featuresSection = document.getElementById('features');
-              if (featuresSection) {
-                featuresSection.scrollIntoView({ behavior: 'smooth' });
-              }
-            }}
+            onClick={() => navigate('/events')}
           >
-            Explore Features
+            Browse Events
           </button>
         </div>
 

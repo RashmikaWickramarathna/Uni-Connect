@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { FiArrowRight, FiHelpCircle, FiMessageSquare, FiUser } from 'react-icons/fi';
+import { FiArrowRight, FiCalendar, FiHelpCircle, FiMessageSquare, FiUser } from 'react-icons/fi';
 
 import Navbar from '../components/Navbar/Navbar';
 import HeroSection from '../components/HeroSection/HeroSection';
@@ -10,6 +10,12 @@ import Footer from '../components/Footer/Footer';
 import './Home.css';
 
 const quickActions = [
+  {
+    title: 'Events',
+    description: 'See all approved events, open the booking flow, and continue to member 4 payment steps.',
+    icon: FiCalendar,
+    route: '/events',
+  },
   {
     title: 'My Feedbacks',
     description: 'Review your submissions, share new ideas, and keep track of responses.',
@@ -47,8 +53,8 @@ const Home = () => {
                 <span className="highlight"> UniConnect</span>
               </h2>
               <p className="section-description">
-                Open your feedbacks, inquiries, and profile from home, then move directly into each separate
-                student page when you need it.
+                Start with approved events and ticket booking from home, then move into your feedbacks,
+                inquiries, and profile when you need them.
               </p>
             </div>
 

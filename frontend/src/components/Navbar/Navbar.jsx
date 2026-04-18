@@ -54,11 +54,13 @@ const Navbar = () => {
 
   const publicNavLinks = [
     { path: '/', label: 'Home' },
+    { path: '/events', label: 'Events' },
     { path: '/submit', label: 'Register Society' },
   ];
 
   const studentNavLinks = [
     { path: '/', label: 'Home' },
+    { path: '/events', label: 'Events' },
     { path: '/my-feedbacks', label: 'My Feedbacks' },
     { path: '/my-inquiries', label: 'My Inquiries' },
     { path: '/profile', label: 'My Profile' },

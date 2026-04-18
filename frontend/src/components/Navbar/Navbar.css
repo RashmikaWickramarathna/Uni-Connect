@@ -17,12 +17,14 @@
 }
 
 .navbar-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 2rem;
-  display: flex;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 1.25rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
-  justify-content: space-between;
+  gap: 1.5rem;
 }
 
 /* Logo Styles */
@@ -70,10 +72,17 @@
 .navbar-links {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  justify-content: flex-start;
+  gap: clamp(1rem, 1.8vw, 2rem);
   list-style: none;
   margin: 0;
   padding: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.navbar-links li {
+  flex-shrink: 0;
 }
 
 .navbar-links a {
@@ -83,6 +92,7 @@
   font-size: 0.95rem;
   transition: color 0.3s ease;
   position: relative;
+  white-space: nowrap;
 }
 
 .navbar-links a:hover,
@@ -130,12 +140,16 @@
   display: flex;
   gap: 0.75rem;
   align-items: center;
+  margin-left: auto;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .auth-user-pill {
   display: inline-flex;
   align-items: center;
-  max-width: 220px;
+  min-width: 0;
+  max-width: min(17rem, 22vw);
   padding: 0.55rem 1rem;
   border-radius: 999px;
   background: rgba(13, 110, 253, 0.1);
@@ -157,6 +171,7 @@
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .btn-login:hover {
@@ -186,6 +201,7 @@
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .btn-logout:hover {
@@ -333,6 +349,12 @@
 @media (max-width: 768px) {
   .mobile-menu-toggle {
     display: block;
+  }
+
+  .navbar-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
   }
 
   .navbar-links {
