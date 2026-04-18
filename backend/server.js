@@ -5,6 +5,9 @@ const cors = require("cors");
 const path = require("path");
 
 const connectDB = require("./src/config/db");
+const bookingAdminRoutes = require("./Routes/adminRoutes");
+const paymentRoutes = require("./Routes/PaymentRoute");
+const ticketRoutes = require("./Routes/ticketBookingRoutes");
 const authRoutes = require("./src/routes/authRoutes");
 const adminRoutes = require("./src/routes/adminRoutes");
 const inquiryRoutes = require("./src/routes/inquiryRoutes");
@@ -49,6 +52,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/admin", bookingAdminRoutes);
 app.use("/api/inquiries", inquiryRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/users", userRoutes);
@@ -57,6 +61,8 @@ app.use("/api/society-requests", societyReqRoutes);
 app.use("/api/society-approval", societyApprovalRoutes);
 app.use("/api/society-auth", societyAuthRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/tickets", ticketRoutes);
+app.use("/api/payments", paymentRoutes);
 
 app.post("/api/test-email", async (req, res) => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {

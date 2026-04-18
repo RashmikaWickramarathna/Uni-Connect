@@ -1,5 +1,30 @@
 const mongoose = require("mongoose");
 
+const ticketTypeSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: ["general", "vip", "early_bird", "student", "complimentary"],
+      default: "general",
+    },
+    price: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalSeats: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    description: {
+      type: String,
+      default: "",
+    },
+  },
+  { _id: false }
+);
+
 const eventSchema = new mongoose.Schema(
   {
     societyId: {
@@ -25,6 +50,11 @@ const eventSchema = new mongoose.Schema(
       minlength: [20, "Min 20 chars"],
       maxlength: [1000, "Max 1000 chars"],
     },
+    shortDescription: {
+      type: String,
+      default: null,
+      maxlength: 200,
+    },
     date: {
       type: String,
       required: [true, "Date required"],
@@ -40,8 +70,8 @@ const eventSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ["Academic", "Sports", "Cultural", "Social", "Workshop", "Other"],
       default: "Other",
+      trim: true,
     },
     organizer: {
       type: String,
@@ -55,15 +85,57 @@ const eventSchema = new mongoose.Schema(
       lowercase: true,
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email"],
     },
+    organizerContact: {
+      email: {
+        type: String,
+        default: null,
+      },
+      phone: {
+        type: String,
+        default: null,
+      },
+    },
     maxParticipants: {
       type: Number,
       default: 100,
       min: [1, "Min 1"],
     },
+    tickets: {
+      type: [ticketTypeSchema],
+      default: [],
+    },
+    totalSeats: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    bookedSeats: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     status: {
       type: String,
-      enum: ["draft", "pending", "approved", "published", "rejected", "cancelled"],
+      enum: [
+        "draft",
+        "pending",
+        "approved",
+        "published",
+        "rejected",
+        "cancelled",
+        "upcoming",
+        "active",
+        "completed",
+      ],
       default: "pending",
+    },
+    isPublished: {
+      type: Boolean,
+      default: false,
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
     },
     adminReason: {
       type: String,
@@ -77,6 +149,52 @@ const eventSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    bannerImage: {
+      type: String,
+      default: null,
+    },
+    location: {
+      address: {
+        type: String,
+        default: null,
+      },
+      city: {
+        type: String,
+        default: null,
+      },
+      mapLink: {
+        type: String,
+        default: null,
+      },
+    },
+    requirements: {
+      type: String,
+      default: null,
+    },
+    agenda: {
+      type: String,
+      default: null,
+    },
+    speakers: [
+      {
+        name: {
+          type: String,
+          default: null,
+        },
+        title: {
+          type: String,
+          default: null,
+        },
+        bio: {
+          type: String,
+          default: null,
+        },
+        photo: {
+          type: String,
+          default: null,
+        },
+      },
+    ],
     reminderSent7Days: {
       type: Boolean,
       default: false,
@@ -94,4 +212,55 @@ const eventSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Event", eventSchema);
+eventSchema.pre("save", function preSave(next) {
+  const fallbackSeats =
+    Number.isFinite(Number(this.maxParticipants)) && Number(this.maxParticipants) > 0
+      ? Number(this.maxParticipants)
+      : 100;
+
+  if (!Array.isArray(this.tickets) || this.tickets.length === 0) {
+    this.tickets = [
+      {
+        type: "general",
+        price: 0,
+        totalSeats: fallbackSeats,
+        description: "General admission",
+      },
+    ];
+  }
+
+  this.totalSeats = this.tickets.reduce((sum, ticket) => sum + Number(ticket.totalSeats || 0), 0);
+
+  if (!this.shortDescription && this.description) {
+    this.shortDescription = this.description.trim().slice(0, 160);
+  }
+
+  if (!this.bannerImage && this.image) {
+    this.bannerImage = this.image;
+  }
+
+  if (!this.image && this.bannerImage) {
+    this.image = this.bannerImage;
+  }
+
+  if (["approved", "published", "upcoming", "active"].includes(String(this.status).toLowerCase())) {
+    this.isPublished = true;
+  }
+
+  if (["rejected", "cancelled", "pending", "draft"].includes(String(this.status).toLowerCase())) {
+    this.isPublished = false;
+  }
+
+  if (this.bookedSeats > this.totalSeats) {
+    this.bookedSeats = this.totalSeats;
+  }
+
+  next();
+});
+
+eventSchema.index({ date: 1 });
+eventSchema.index({ status: 1 });
+eventSchema.index({ organizerEmail: 1 });
+eventSchema.index({ isPublished: 1 });
+
+module.exports = mongoose.models.Event || mongoose.model("Event", eventSchema);

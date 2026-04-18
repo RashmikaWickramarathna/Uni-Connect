@@ -10,6 +10,7 @@ const Society = require("../models/society");
 const SocietyRequest = require("../models/societyRequest");
 
 const router = express.Router();
+const PUBLIC_STATUSES = new Set(["approved", "published", "upcoming", "active"]);
 
 const uploadsDir = path.join(__dirname, "..", "..", "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -45,7 +46,10 @@ const normalizeTags = (tags) => {
   }
 
   if (typeof tags === "string") {
-    return tags.split(",").map((tag) => tag.trim()).filter(Boolean);
+    return tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
   }
 
   return [];
@@ -69,10 +73,54 @@ const toDateString = (value) => {
 };
 
 const normalizeStatus = (status) => {
-  const normalizedStatus = String(status || "pending").toLowerCase();
+  const normalizedStatus = String(status || "pending").trim().toLowerCase();
   if (normalizedStatus === "published") return "approved";
   if (normalizedStatus === "draft") return "pending";
   return normalizedStatus;
+};
+
+const toBoolean = (value) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    return ["true", "1", "yes", "on"].includes(value.trim().toLowerCase());
+  }
+  return Boolean(value);
+};
+
+const buildDefaultTickets = (seatCount = 100) => [
+  {
+    type: "general",
+    price: 0,
+    totalSeats: seatCount,
+    description: "General admission",
+  },
+];
+
+const normalizeTicketEntry = (ticket, fallbackSeats = 100) => {
+  const totalSeats = Number(ticket?.totalSeats);
+  return {
+    type: String(ticket?.type || "general").trim().toLowerCase() || "general",
+    price: Math.max(0, Number(ticket?.price) || 0),
+    totalSeats:
+      Number.isFinite(totalSeats) && totalSeats > 0 ? totalSeats : Math.max(1, fallbackSeats),
+    description: String(ticket?.description || "").trim(),
+  };
+};
+
+const parseTicketsInput = (tickets, fallbackSeats = 100) => {
+  if (!tickets) return [];
+
+  let parsedTickets = tickets;
+  if (typeof tickets === "string") {
+    try {
+      parsedTickets = JSON.parse(tickets);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(parsedTickets)) return [];
+  return parsedTickets.map((ticket) => normalizeTicketEntry(ticket, fallbackSeats));
 };
 
 const isPopulatedDoc = (value) =>
@@ -94,6 +142,21 @@ const normalizeEventRecord = (event) => {
     .trim()
     .toLowerCase();
   const maxParticipants = Number(event?.maxParticipants ?? event?.maxAttendees);
+  const fallbackSeats =
+    Number.isFinite(maxParticipants) && maxParticipants > 0 ? maxParticipants : 100;
+  const tickets =
+    Array.isArray(event?.tickets) && event.tickets.length > 0
+      ? event.tickets.map((ticket) => normalizeTicketEntry(ticket, fallbackSeats))
+      : buildDefaultTickets(fallbackSeats);
+  const totalSeats =
+    tickets.reduce((sum, ticket) => sum + Number(ticket.totalSeats || 0), 0) ||
+    fallbackSeats;
+  const bookedSeats = Math.max(
+    0,
+    Math.min(Number(event?.bookedSeats || 0), Number.isFinite(totalSeats) ? totalSeats : 0)
+  );
+  const status = normalizeStatus(event?.status || (event?.isPublished ? "approved" : "pending"));
+  const image = event?.image || event?.bannerImage || null;
 
   return {
     ...event,
@@ -101,16 +164,26 @@ const normalizeEventRecord = (event) => {
     societyRequestId: linkedRequest?._id || event?.societyRequestId || null,
     title: String(event?.title || "Untitled Event").trim() || "Untitled Event",
     description: String(event?.description || "").trim(),
+    shortDescription:
+      String(event?.shortDescription || event?.description || "")
+        .trim()
+        .slice(0, 160) || "",
     date: toDateString(event?.date || event?.eventDate),
     time: String(event?.time || "").trim(),
     venue: String(event?.venue || "TBA").trim() || "TBA",
     category: String(event?.category || "Other").trim() || "Other",
     organizer,
     organizerEmail,
-    maxParticipants:
-      Number.isFinite(maxParticipants) && maxParticipants > 0 ? maxParticipants : 100,
-    status: normalizeStatus(event?.status),
-    image: event?.image || null,
+    maxParticipants: fallbackSeats,
+    tickets,
+    totalSeats,
+    bookedSeats,
+    availableSeats: Math.max(totalSeats - bookedSeats, 0),
+    status,
+    image,
+    bannerImage: image,
+    isFeatured: Boolean(event?.isFeatured),
+    isPublished: Boolean(event?.isPublished || PUBLIC_STATUSES.has(status)),
     tags: Array.isArray(event?.tags) ? event.tags.filter(Boolean) : [],
     views: Number.isFinite(Number(event?.views)) ? Number(event.views) : 0,
     adminReason: event?.adminReason || null,
@@ -120,6 +193,22 @@ const normalizeEventRecord = (event) => {
     createdAt: event?.createdAt || null,
     updatedAt: event?.updatedAt || null,
   };
+};
+
+const isPublicEvent = (event) => {
+  const normalized = normalizeEventRecord(event);
+  return normalized.isPublished || PUBLIC_STATUSES.has(normalized.status);
+};
+
+const isUpcomingEvent = (event) => {
+  const normalizedDate = toDateString(event?.date);
+  if (!normalizedDate) return false;
+
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+    now.getDate()
+  ).padStart(2, "0")}`;
+  return normalizedDate >= todayStr;
 };
 
 const getNormalizedEventById = async (id) => {
@@ -157,20 +246,35 @@ const buildSocietyEventQuery = async (email, organizerName) => {
 
 const normalizeEventPayload = (data, image = null) => {
   const maxParticipants = Number(data.maxParticipants);
+  const safeMaxParticipants =
+    Number.isFinite(maxParticipants) && maxParticipants > 0 ? maxParticipants : 100;
+  const tickets = parseTicketsInput(data.tickets, safeMaxParticipants);
+  const normalizedTickets =
+    tickets.length > 0 ? tickets : buildDefaultTickets(safeMaxParticipants);
+  const totalSeats = normalizedTickets.reduce(
+    (sum, ticket) => sum + Number(ticket.totalSeats || 0),
+    0
+  );
+  const status = normalizeStatus(data.status);
 
   return {
     title: data.title?.trim(),
     description: data.description?.trim(),
+    shortDescription: data.shortDescription?.trim() || data.description?.trim()?.slice(0, 160),
     date: data.date,
     time: data.time || null,
     venue: data.venue?.trim(),
     category: data.category || "Other",
     organizer: data.organizer?.trim(),
     organizerEmail: data.organizerEmail?.trim()?.toLowerCase(),
-    maxParticipants:
-      Number.isFinite(maxParticipants) && maxParticipants > 0 ? maxParticipants : 100,
+    maxParticipants: safeMaxParticipants,
+    tickets: normalizedTickets,
+    totalSeats,
+    isFeatured: toBoolean(data.isFeatured),
+    isPublished: toBoolean(data.isPublished) || PUBLIC_STATUSES.has(status),
+    status,
     tags: normalizeTags(data.tags),
-    ...(image ? { image } : {}),
+    ...(image ? { image, bannerImage: image } : {}),
   };
 };
 
@@ -197,7 +301,9 @@ const validate = async (data, excludeId = null) => {
     errors.push("Event date is required.");
   } else {
     const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+      now.getDate()
+    ).padStart(2, "0")}`;
     if (date <= todayStr) errors.push("Date must be at least one day in the future.");
   }
 
@@ -233,6 +339,48 @@ const validate = async (data, excludeId = null) => {
 
 router.get("/verify-event-token/:token", verifyEventToken);
 router.post("/:token", upload.single("image"), createEvent);
+
+router.get("/public", async (req, res) => {
+  try {
+    const { category, featured, search } = req.query;
+    const normalizedSearch = String(search || "").trim().toLowerCase();
+    const normalizedCategory = String(category || "").trim().toLowerCase();
+
+    const events = (await Event.find().sort({ date: 1 }).lean())
+      .map(normalizeEventRecord)
+      .filter((event) => isPublicEvent(event) && isUpcomingEvent(event))
+      .filter((event) =>
+        normalizedCategory ? String(event.category).trim().toLowerCase() === normalizedCategory : true
+      )
+      .filter((event) => (featured ? event.isFeatured : true))
+      .filter((event) => {
+        if (!normalizedSearch) return true;
+        return [event.title, event.venue, event.organizer, event.description]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearch);
+      });
+
+    res.json(events);
+  } catch (err) {
+    res.status(500).json({ errors: [err.message] });
+  }
+});
+
+router.get("/public/:id", async (req, res) => {
+  try {
+    await Event.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
+    const event = await getNormalizedEventById(req.params.id);
+
+    if (!event || !isPublicEvent(event)) {
+      return res.status(404).json({ errors: ["Not found"] });
+    }
+
+    res.json(event);
+  } catch (err) {
+    res.status(500).json({ errors: [err.message] });
+  }
+});
 
 router.get("/", async (req, res) => {
   try {
@@ -305,9 +453,13 @@ router.get("/analytics", async (_req, res) => {
       .slice(0, 5);
 
     const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
+      today.getDate()
+    ).padStart(2, "0")}`;
     const in30Days = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-    const in30Str = `${in30Days.getFullYear()}-${String(in30Days.getMonth() + 1).padStart(2, "0")}-${String(in30Days.getDate()).padStart(2, "0")}`;
+    const in30Str = `${in30Days.getFullYear()}-${String(in30Days.getMonth() + 1).padStart(2, "0")}-${String(
+      in30Days.getDate()
+    ).padStart(2, "0")}`;
     const upcoming = all.filter(
       (event) => event.status === "approved" && event.date > todayStr && event.date <= in30Str
     ).length;
@@ -407,7 +559,9 @@ router.post("/", upload.single("image"), async (req, res) => {
   } catch (err) {
     deleteUploadedFile(req.file?.path);
     if (err.name === "ValidationError") {
-      return res.status(400).json({ errors: Object.values(err.errors).map((error) => error.message) });
+      return res
+        .status(400)
+        .json({ errors: Object.values(err.errors).map((error) => error.message) });
     }
     res.status(500).json({ errors: [err.message] });
   }
@@ -445,14 +599,20 @@ router.put("/:id", upload.single("image"), async (req, res) => {
 
 router.patch("/:id/status", async (req, res) => {
   try {
-    const { status, adminReason } = req.body;
+    const status = normalizeStatus(req.body.status);
+    const { adminReason } = req.body;
     if (status === "rejected" && !adminReason) {
       return res.status(400).json({ errors: ["Reason required for rejection."] });
     }
 
     const event = await Event.findByIdAndUpdate(
       req.params.id,
-      { status, adminReason: adminReason || null, adminActionAt: new Date() },
+      {
+        status,
+        isPublished: PUBLIC_STATUSES.has(status),
+        adminReason: adminReason || null,
+        adminActionAt: new Date(),
+      },
       { new: true }
     );
 

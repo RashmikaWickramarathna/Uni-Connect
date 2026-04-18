@@ -66,4 +66,4 @@ public/uploads/
 .chrome-headless/
 .edge-headless/
 chrome-localhost-*.png
-node_modules
+node_modules/
