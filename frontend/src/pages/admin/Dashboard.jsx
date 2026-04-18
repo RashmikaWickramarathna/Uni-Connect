@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FiCalendar, FiClipboard, FiHelpCircle, FiInfo, FiMessageSquare } from 'react-icons/fi';
+import { FiCalendar, FiClipboard, FiCreditCard, FiFileText, FiHelpCircle, FiInfo, FiMessageSquare } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 import AdminLayout from '../../components/AdminLayout';
@@ -121,6 +121,34 @@ export default function Dashboard() {
               <div className="module-meta">
                 <span className="pill-dot" />
                 Manage events
+              </div>
+            </Link>
+
+            <Link className="module-card module-card-link" to="/admin/bookings">
+              <div className="module-card-head">
+                <div className="module-icon system">
+                  <FiFileText />
+                </div>
+              </div>
+              <h4 className="module-title">Ticket Reservations</h4>
+              <p className="module-description">Review student ticket bookings and approve pending cash reservations from the admin panel.</p>
+              <div className="module-meta">
+                <span className="pill-dot" />
+                Manage bookings
+              </div>
+            </Link>
+
+            <Link className="module-card module-card-link" to="/admin/payments">
+              <div className="module-card-head">
+                <div className="module-icon feedback">
+                  <FiCreditCard />
+                </div>
+              </div>
+              <h4 className="module-title">Payment Management</h4>
+              <p className="module-description">Track recorded payments, filter transaction history, and confirm pending payment entries.</p>
+              <div className="module-meta">
+                <span className="pill-dot" />
+                Manage payments
               </div>
             </Link>
 

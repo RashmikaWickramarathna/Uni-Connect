@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { normalizeAuthRole, useAuth } from "../context/AuthContext";
 import AdminBookingsPage from "../pages/Admin/AdminBookingsPage";
+import AdminPaymentsPage from "../pages/Admin/AdminPaymentsPage";
 import EventsListPage from "../pages/Events/EventsListPage";
 import MyTicketsPage from "../pages/MyTickets/MyTicketPage";
 import PaymentHistoryPage from "../pages/PaymentHistory/PaymentHistoryPage";
@@ -239,6 +240,14 @@ export default function AppRouter() {
           element={
             <ProtectedRoute allowedRole="admin">
               <AdminBookingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/payments"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminPaymentsPage />
             </ProtectedRoute>
           }
         />

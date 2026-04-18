@@ -9,11 +9,11 @@ const menuItems = [
   { label: "User Accounts", icon: FiUsers, disabled: true },
   { label: "Society Approvals", icon: FiClipboard, path: "/society-admin/requests" },
   { label: "Events", icon: FiCalendar, path: "/admin/events" },
-  { label: "Ticket Reservations", icon: FiFileText, disabled: true },
-  { label: "Payments", icon: FiCreditCard, disabled: true },
+  { label: "Ticket Reservations", icon: FiFileText, path: "/admin/bookings" },
+  { label: "Payments", icon: FiCreditCard, path: "/admin/payments" },
   { label: "Feedback", icon: FiMessageSquare, path: "/admin/feedbacks" },
   { label: "Inquiries", icon: FiHelpCircle, path: "/admin/inquiries" },
-  { label: "Reports", icon: FiBarChart2, disabled: true },
+  
   { label: "Settings", icon: FiSettings, disabled: true },
 ];
 
