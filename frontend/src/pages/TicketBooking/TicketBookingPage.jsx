@@ -14,6 +14,7 @@ const STEPS = ["Details", "Tickets", "Payment", "Confirm"];
 // ─────────────────────────────────────────────
 function PaymentMethodStep({ totalAmount, ticketType, quantity, onConfirm, onBack, loading, error }) {
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const currentMonth = new Date().toISOString().slice(0, 7);
 
   const [bankDetails, setBankDetails] = useState({
     accountHolderName: "",
@@ -68,7 +69,8 @@ function PaymentMethodStep({ totalAmount, ticketType, quantity, onConfirm, onBac
     if (paymentMethod === "online") {
       if (!onlineDetails.cardholderName.trim())                      return setLocalError("Cardholder name is required.");
       if (onlineDetails.cardNumber.replace(/\s/g, "").length !== 16) return setLocalError("Enter a valid 16-digit card number.");
-      if (onlineDetails.expiryDate.length !== 5)                     return setLocalError("Enter expiry date as MM/YY.");
+      if (!/^\d{4}-\d{2}$/.test(onlineDetails.expiryDate))           return setLocalError("Select a valid expiry month.");
+      if (onlineDetails.expiryDate < currentMonth)                   return setLocalError("Card expiry month cannot be in the past.");
       if (onlineDetails.cvv.length !== 3)                            return setLocalError("Enter a valid 3-digit CVV.");
     }
     onConfirm(
@@ -175,8 +177,8 @@ function PaymentMethodStep({ totalAmount, ticketType, quantity, onConfirm, onBac
               <label>Expiry Date *</label>
               <input 
                 name="expiryDate" 
-                type="date"
-                min={new Date().toISOString().split('T')[0]}
+                type="month"
+                min={currentMonth}
                 value={onlineDetails.expiryDate}
                 onChange={handleOnlineChange}
                 required 

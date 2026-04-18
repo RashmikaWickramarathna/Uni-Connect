@@ -1,5 +1,10 @@
 const mongoose = require("mongoose");
 
+const DEFAULT_GENERAL_TICKET_PRICE = Math.max(
+  1,
+  Number(process.env.DEFAULT_GENERAL_TICKET_PRICE) || 500
+);
+
 const ticketTypeSchema = new mongoose.Schema(
   {
     type: {
@@ -103,6 +108,10 @@ const eventSchema = new mongoose.Schema(
     tickets: {
       type: [ticketTypeSchema],
       default: [],
+    },
+    isFreeEvent: {
+      type: Boolean,
+      default: false,
     },
     totalSeats: {
       type: Number,
@@ -222,11 +231,23 @@ eventSchema.pre("save", function preSave(next) {
     this.tickets = [
       {
         type: "general",
-        price: 0,
+        price: this.isFreeEvent ? 0 : DEFAULT_GENERAL_TICKET_PRICE,
         totalSeats: fallbackSeats,
-        description: "General admission",
+        description: this.isFreeEvent ? "Free admission" : "General admission",
       },
     ];
+  }
+
+  if (this.isFreeEvent) {
+    this.tickets = this.tickets.map((ticket) => ({
+      type: String(ticket?.type || "general").trim().toLowerCase() || "general",
+      price: 0,
+      totalSeats:
+        Number.isFinite(Number(ticket?.totalSeats)) && Number(ticket?.totalSeats) > 0
+          ? Number(ticket.totalSeats)
+          : fallbackSeats,
+      description: String(ticket?.description || "").trim() || "Free admission",
+    }));
   }
 
   this.totalSeats = this.tickets.reduce((sum, ticket) => sum + Number(ticket.totalSeats || 0), 0);

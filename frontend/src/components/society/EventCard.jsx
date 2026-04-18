@@ -18,6 +18,9 @@ export default function EventCard({ event, onEdit, onDelete, onGeneratePost }) {
   const venue = event.venue || 'TBA';
   const category = event.category || 'Other';
   const maxParticipants = event.maxParticipants || 100;
+  const generalTicket = Array.isArray(event.tickets)
+    ? event.tickets.find((ticket) => String(ticket?.type).toLowerCase() === 'general')
+    : null;
 
   const fmtDate = d => { if(!d) return ''; const [y,m,day]=d.split('-'); return new Date(y,m-1,day).toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric',year:'numeric'}); };
   const fmtTime = t => { if(!t) return ''; const [h,min]=t.split(':'); return `${h%12||12}:${min} ${h>=12?'PM':'AM'}`; };
@@ -73,6 +76,12 @@ export default function EventCard({ event, onEdit, onDelete, onGeneratePost }) {
               <span><strong style={{color:'#374151'}}>Time:</strong> {fmtTime(event.time)}</span>
               <span><strong style={{color:'#374151'}}>Venue:</strong> {venue}</span>
               <span><strong style={{color:'#374151'}}>Max:</strong> {maxParticipants}</span>
+              {generalTicket&&(
+                <span>
+                  <strong style={{color:'#374151'}}>General Ticket:</strong>{' '}
+                  {Number(generalTicket.price||0) === 0 ? 'Free' : `Rs. ${Number(generalTicket.price||0).toLocaleString()}`}
+                </span>
+              )}
               {event.views>0&&<span><strong style={{color:'#374151'}}>Views:</strong> {event.views}</span>}
             </div>
 

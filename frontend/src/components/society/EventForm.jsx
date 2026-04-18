@@ -2,26 +2,114 @@ import React, { useEffect, useRef, useState } from 'react';
 import { getImageUrl } from '../../api/societyPortalApi';
 
 const CATS = ['Academic', 'Sports', 'Cultural', 'Social', 'Workshop', 'Other'];
+const TICKET_PRICE_OPTIONS = [100, 250, 500, 750, 1000, 2000, 3000, 4000];
+const DEFAULT_PAID_TICKET_PRICE = 500;
+const MAX_EVENTS_PER_DAY = 10;
+const MAX_TAGS = 8;
+const MAX_TAG_LENGTH = 24;
+const MAX_TICKET_NOTE_LENGTH = 120;
 
-const buildInitialForm = (editData, currentUser) => ({
-  title: editData?.title || '',
-  description: editData?.description || '',
-  date: editData?.date || '',
-  time: editData?.time || '',
-  venue: editData?.venue || '',
-  category: editData?.category || 'Academic',
-  organizer: editData?.organizer || currentUser?.name || '',
-  organizerEmail: editData?.organizerEmail || currentUser?.email || '',
-  maxParticipants: editData?.maxParticipants || 100,
-  tags: Array.isArray(editData?.tags) ? editData.tags.join(', ') : '',
-});
+const getGeneralTicket = (editData) =>
+  Array.isArray(editData?.tickets)
+    ? editData.tickets.find((ticket) => String(ticket?.type).toLowerCase() === 'general')
+    : null;
 
-const validate = (form, imgFile) => {
+const normalizeText = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+
+const parseTags = (value) =>
+  String(value || '')
+    .split(',')
+    .map((tag) => normalizeText(tag))
+    .filter(Boolean);
+
+const getTicketPriceOptions = (price) => {
+  const normalizedPrice = Number(price);
+  if (Number.isFinite(normalizedPrice) && normalizedPrice > 0 && !TICKET_PRICE_OPTIONS.includes(normalizedPrice)) {
+    return [...TICKET_PRICE_OPTIONS, normalizedPrice].sort((left, right) => left - right);
+  }
+
+  return TICKET_PRICE_OPTIONS;
+};
+
+const buildInitialForm = (editData, currentUser) => {
+  const generalTicket = getGeneralTicket(editData);
+  const generalTicketPrice = Number(generalTicket?.price);
+  const isFreeEvent =
+    editData?.isFreeEvent === true ||
+    (generalTicket && Number.isFinite(generalTicketPrice) && generalTicketPrice === 0);
+
+  return {
+    title: normalizeText(editData?.title || ''),
+    description: editData?.description || '',
+    date: editData?.date || '',
+    time: editData?.time || '',
+    venue: normalizeText(editData?.venue || ''),
+    category: editData?.category || 'Academic',
+    organizer: editData?.organizer || currentUser?.name || '',
+    organizerEmail: editData?.organizerEmail || currentUser?.email || '',
+    maxParticipants: editData?.maxParticipants || 100,
+    ticketMode: isFreeEvent ? 'free' : 'paid',
+    generalSeats: generalTicket?.totalSeats || editData?.maxParticipants || 100,
+    generalPrice:
+      Number.isFinite(generalTicketPrice) && generalTicketPrice > 0
+        ? generalTicketPrice
+        : DEFAULT_PAID_TICKET_PRICE,
+    generalDescription: normalizeText(
+      generalTicket?.description || (isFreeEvent ? 'Free admission' : 'General admission')
+    ),
+    tags: Array.isArray(editData?.tags) ? editData.tags.join(', ') : '',
+  };
+};
+
+const getExistingEventConflicts = (form, existingEvents, editId) => {
+  const normalizedDate = String(form.date || '').trim();
+  if (!normalizedDate) {
+    return {
+      sameDayEvents: [],
+      sameVenueEvent: null,
+      sameTimeEvent: null,
+      duplicateTitleEvent: null,
+    };
+  }
+
+  const normalizedVenue = normalizeText(form.venue).toLowerCase();
+  const normalizedTime = String(form.time || '').trim();
+  const normalizedTitle = normalizeText(form.title).toLowerCase();
+  const filteredEvents = Array.isArray(existingEvents)
+    ? existingEvents.filter((item) => item?.id !== editId && item?.date === normalizedDate)
+    : [];
+
+  return {
+    sameDayEvents: filteredEvents,
+    sameVenueEvent: filteredEvents.find(
+      (item) => normalizedVenue && normalizeText(item?.venue).toLowerCase() === normalizedVenue
+    ),
+    sameTimeEvent: filteredEvents.find(
+      (item) => normalizedTime && String(item?.time || '').trim() === normalizedTime
+    ),
+    duplicateTitleEvent: filteredEvents.find(
+      (item) => normalizedTitle && normalizeText(item?.title).toLowerCase() === normalizedTitle
+    ),
+  };
+};
+
+const validate = (form, imgFile, existingEvents, editData) => {
   const errors = {};
+  const normalizedTitle = normalizeText(form.title);
+  const normalizedVenue = normalizeText(form.venue);
+  const normalizedDescription = String(form.description || '').trim();
+  const normalizedTicketNote = normalizeText(form.generalDescription);
+  const tagList = parseTags(form.tags);
+  const maxParticipants = Number(form.maxParticipants);
+  const generalSeats = Number(form.generalSeats);
+  const conflicts = getExistingEventConflicts(form, existingEvents, editData?._id);
 
-  if (!form.title.trim()) errors.title = 'Title is required.';
-  else if (form.title.trim().length < 5) errors.title = 'Title needs at least 5 characters.';
-  else if (form.title.trim().length > 100) errors.title = `Title too long (${form.title.trim().length}/100).`;
+  if (!normalizedTitle) errors.title = 'Title is required.';
+  else if (normalizedTitle.length < 5) errors.title = 'Title needs at least 5 characters.';
+  else if (normalizedTitle.length > 100) errors.title = `Title too long (${normalizedTitle.length}/100).`;
+  else if (conflicts.duplicateTitleEvent) {
+    errors.title = `"${conflicts.duplicateTitleEvent.title}" is already scheduled by your society on ${form.date}.`;
+  }
 
   if (!form.organizer.trim()) errors.organizer = 'Organizer name is required.';
 
@@ -37,16 +125,66 @@ const validate = (form, imgFile) => {
       now.getDate()
     ).padStart(2, '0')}`;
     if (form.date <= todayStr) errors.date = 'Date must be at least one day in the future.';
+    else if (conflicts.sameDayEvents.length >= MAX_EVENTS_PER_DAY) {
+      errors.date = `Only ${MAX_EVENTS_PER_DAY} events can be scheduled by your society on one day.`;
+    }
   }
 
   if (!form.time) errors.time = 'Time is required.';
-  if (!form.venue.trim()) errors.venue = 'Venue is required.';
+  else if (!/^\d{2}:\d{2}$/.test(String(form.time || '').trim())) {
+    errors.time = 'Time must be in HH:MM format.';
+  } else if (conflicts.sameTimeEvent) {
+    errors.time = `"${conflicts.sameTimeEvent.title}" is already planned at ${form.time} on ${form.date}.`;
+  }
 
-  if (!form.description.trim()) errors.description = 'Description is required.';
-  else if (form.description.trim().length < 20) {
-    errors.description = `Too short (${form.description.trim().length}/20 min chars).`;
-  } else if (form.description.trim().length > 1000) {
-    errors.description = `Too long (${form.description.trim().length}/1000 max).`;
+  if (!normalizedVenue) errors.venue = 'Venue is required.';
+  else if (normalizedVenue.length < 3) errors.venue = 'Venue needs at least 3 characters.';
+  else if (normalizedVenue.length > 120) errors.venue = 'Venue cannot exceed 120 characters.';
+  else if (conflicts.sameVenueEvent) {
+    errors.venue = `"${conflicts.sameVenueEvent.title}" already uses "${conflicts.sameVenueEvent.venue}" on ${form.date}.`;
+  }
+
+  if (!normalizedDescription) errors.description = 'Description is required.';
+  else if (normalizedDescription.length < 20) {
+    errors.description = `Too short (${normalizedDescription.length}/20 min chars).`;
+  } else if (normalizedDescription.length > 1000) {
+    errors.description = `Too long (${normalizedDescription.length}/1000 max).`;
+  }
+
+  if (form.ticketMode === 'paid') {
+    const generalPrice = Number(form.generalPrice);
+    if (!Number.isFinite(generalPrice) || generalPrice <= 0) {
+      errors.generalPrice = 'Select a valid ticket price.';
+    }
+  }
+
+  if (!Number.isInteger(maxParticipants) || maxParticipants < 1 || maxParticipants > 10000) {
+    errors.maxParticipants = 'Max participants must be between 1 and 10000.';
+  }
+
+  if (!Number.isInteger(generalSeats) || generalSeats < 1 || generalSeats > 10000) {
+    errors.generalSeats = 'General ticket seats must be between 1 and 10000.';
+  } else if (Number.isInteger(maxParticipants) && generalSeats > maxParticipants) {
+    errors.generalSeats = 'General ticket seats cannot exceed max participants.';
+  }
+
+  if (normalizedTicketNote.length > MAX_TICKET_NOTE_LENGTH) {
+    errors.generalDescription = `Ticket note is too long (${normalizedTicketNote.length}/${MAX_TICKET_NOTE_LENGTH}).`;
+  }
+
+  if (tagList.length > MAX_TAGS) {
+    errors.tags = `Only ${MAX_TAGS} tags are allowed.`;
+  } else {
+    const invalidTag = tagList.find((tag) => tag.length > MAX_TAG_LENGTH);
+    const duplicateTags = tagList.filter(
+      (tag, index) => tagList.findIndex((item) => item.toLowerCase() === tag.toLowerCase()) !== index
+    );
+
+    if (invalidTag) {
+      errors.tags = `Each tag must be ${MAX_TAG_LENGTH} characters or fewer.`;
+    } else if (duplicateTags.length > 0) {
+      errors.tags = `Duplicate tags are not allowed: ${[...new Set(duplicateTags)].join(', ')}.`;
+    }
   }
 
   if (imgFile) {
@@ -60,7 +198,7 @@ const validate = (form, imgFile) => {
   return errors;
 };
 
-export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDates, currentUser }) {
+export default function EventForm({ onSubmit, editData, onCancelEdit, existingEvents, currentUser }) {
   const [form, setForm] = useState(buildInitialForm(editData, currentUser));
   const [errs, setErrs] = useState({});
   const [serverErrs, setServerErrs] = useState([]);
@@ -85,10 +223,47 @@ export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDate
 
   const onChange = (event) => {
     const { name, value } = event.target;
-    setForm((previous) => ({ ...previous, [name]: value }));
+    setForm((previous) => {
+      if (name === 'ticketMode') {
+        return {
+          ...previous,
+          ticketMode: value,
+          generalPrice:
+            value === 'paid' && Number(previous.generalPrice) <= 0
+              ? DEFAULT_PAID_TICKET_PRICE
+              : previous.generalPrice,
+          generalDescription:
+            previous.generalDescription.trim() ||
+            (value === 'free' ? 'Free admission' : 'General admission'),
+        };
+      }
 
-    if (errs[name]) {
-      setErrs((previous) => ({ ...previous, [name]: '' }));
+      return { ...previous, [name]: value };
+    });
+
+    if (serverErrs.length > 0) {
+      setServerErrs([]);
+    }
+
+    if (Object.keys(errs).length > 0) {
+      const nextForm = (() => {
+        if (name === 'ticketMode') {
+          return {
+            ...form,
+            ticketMode: value,
+            generalPrice:
+              value === 'paid' && Number(form.generalPrice) <= 0
+                ? DEFAULT_PAID_TICKET_PRICE
+                : form.generalPrice,
+            generalDescription:
+              normalizeText(form.generalDescription) || (value === 'free' ? 'Free admission' : 'General admission'),
+          };
+        }
+
+        return { ...form, [name]: value };
+      })();
+      const nextErrors = validate(nextForm, imgFile, existingEvents, editData);
+      setErrs(nextErrors);
     }
   };
 
@@ -118,20 +293,10 @@ export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDate
     event.preventDefault();
     setServerErrs([]);
 
-    const errors = validate(form, imgFile);
+    const errors = validate(form, imgFile, existingEvents, editData);
     if (Object.keys(errors).length > 0) {
       setErrs(errors);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    const isEdit = Boolean(editData);
-    const conflict = bookedDates?.find(
-      (item) => item.date === form.date && (!isEdit || item.id !== editData._id)
-    );
-
-    if (conflict) {
-      setErrs((previous) => ({ ...previous, date: `"${conflict.title}" already on this date.` }));
       return;
     }
 
@@ -139,7 +304,38 @@ export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDate
 
     try {
       const formData = new FormData();
-      Object.keys(form).forEach((key) => formData.append(key, form[key]));
+      const isFreeEvent = form.ticketMode === 'free';
+      const normalizedForm = {
+        ...form,
+        title: normalizeText(form.title),
+        venue: normalizeText(form.venue),
+        description: String(form.description || '').trim(),
+        generalDescription: normalizeText(form.generalDescription),
+        tags: parseTags(form.tags).join(', '),
+      };
+      const ticketSeats = Math.max(1, Number(form.generalSeats) || Number(form.maxParticipants) || 100);
+      const ticketPrice = isFreeEvent
+        ? 0
+        : Math.max(1, Number(form.generalPrice) || DEFAULT_PAID_TICKET_PRICE);
+
+      Object.entries(normalizedForm).forEach(([key, value]) => {
+        if (['ticketMode', 'generalSeats', 'generalPrice', 'generalDescription'].includes(key)) return;
+        formData.append(key, value);
+      });
+      formData.set('isFreeEvent', String(isFreeEvent));
+      formData.set(
+        'tickets',
+        JSON.stringify([
+          {
+            type: 'general',
+            price: ticketPrice,
+            totalSeats: ticketSeats,
+            description:
+              normalizeText(form.generalDescription) || (isFreeEvent ? 'Free admission' : 'General admission'),
+          },
+        ])
+      );
+      formData.set('maxParticipants', String(Number(form.maxParticipants) || ticketSeats));
       if (imgFile) formData.append('image', imgFile);
 
       await onSubmit(formData);
@@ -181,6 +377,7 @@ export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDate
   };
 
   const fld = { marginBottom: '18px' };
+  const ticketModeOptions = getTicketPriceOptions(form.generalPrice);
   const previewFrame = {
     width: '100%',
     height: '180px',
@@ -321,7 +518,7 @@ export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDate
             <label style={lbl}>Event Date *</label>
             <input style={inp('date')} type="date" name="date" value={form.date} onChange={onChange} />
             <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
-              Must be a future date. Same date and same venue cannot be used twice.
+              Must be a future date. Venue conflicts, same-time conflicts, and daily limits are checked.
             </p>
             {errTxt('date')}
           </div>
@@ -340,6 +537,7 @@ export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDate
               value={form.venue}
               onChange={onChange}
               placeholder="e.g. Main Auditorium"
+              maxLength={120}
             />
             {errTxt('venue')}
           </div>
@@ -362,7 +560,133 @@ export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDate
               value={form.maxParticipants}
               onChange={onChange}
               min={1}
+              max={10000}
+              step={1}
             />
+            {errTxt('maxParticipants')}
+          </div>
+
+          <div style={{ ...fld, gridColumn: '1 / -1' }}>
+            <label style={lbl}>Ticket Access *</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              {[
+                {
+                  value: 'free',
+                  title: 'Free Ticket',
+                  description: 'Students can book instantly without payment.',
+                },
+                {
+                  value: 'paid',
+                  title: 'Paid Ticket',
+                  description: 'Students must complete the payment step before booking.',
+                },
+              ].map((option) => {
+                const isSelected = form.ticketMode === option.value;
+                return (
+                  <label
+                    key={option.value}
+                    style={{
+                      border: `1px solid ${isSelected ? '#2563eb' : '#e2e8f0'}`,
+                      background: isSelected ? '#eff6ff' : '#fff',
+                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      display: 'flex',
+                      gap: '10px',
+                      cursor: 'pointer',
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="ticketMode"
+                      value={option.value}
+                      checked={isSelected}
+                      onChange={onChange}
+                      style={{ marginTop: '3px' }}
+                    />
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
+                        {option.title}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                        {option.description}
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>
+              This choice decides whether the student sees the payment step.
+            </p>
+          </div>
+
+          {form.ticketMode === 'paid' ? (
+            <div style={fld}>
+              <label style={lbl}>Ticket Price (LKR) *</label>
+              <select
+                style={inp('generalPrice')}
+                name="generalPrice"
+                value={form.generalPrice}
+                onChange={onChange}
+              >
+                {ticketModeOptions.map((price) => (
+                  <option key={price} value={price}>
+                    Rs. {Number(price).toLocaleString()}
+                  </option>
+                ))}
+              </select>
+              <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                Students will pay this amount before the booking is confirmed.
+              </p>
+              {errTxt('generalPrice')}
+            </div>
+          ) : (
+            <div style={fld}>
+              <label style={lbl}>Ticket Price</label>
+              <div
+                style={{
+                  ...inp('generalPrice'),
+                  background: '#f8fafc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  minHeight: '42px',
+                }}
+              >
+                Free event
+              </div>
+              <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                Students can continue without entering payment details.
+              </p>
+            </div>
+          )}
+
+          <div style={fld}>
+            <label style={lbl}>General Ticket Seats *</label>
+            <input
+              style={inp('generalSeats')}
+              type="number"
+              name="generalSeats"
+              value={form.generalSeats}
+              onChange={onChange}
+              min={1}
+              max={10000}
+              step={1}
+            />
+            {errTxt('generalSeats')}
+          </div>
+
+          <div style={{ ...fld, gridColumn: '1 / -1' }}>
+            <label style={lbl}>Ticket Note</label>
+            <input
+              style={inp('generalDescription')}
+              name="generalDescription"
+              value={form.generalDescription}
+              onChange={onChange}
+              placeholder={form.ticketMode === 'free' ? 'e.g. Free admission' : 'e.g. General admission'}
+              maxLength={MAX_TICKET_NOTE_LENGTH}
+            />
+            {errTxt('generalDescription')}
           </div>
 
           <div style={{ ...fld, gridColumn: '1 / -1' }}>
@@ -373,10 +697,12 @@ export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDate
               value={form.tags}
               onChange={onChange}
               placeholder="e.g. science, technology, competition"
+              maxLength={MAX_TAGS * (MAX_TAG_LENGTH + 2)}
             />
             <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
-              Add tags to help others find your event
+              Add up to {MAX_TAGS} unique tags to help others find your event.
             </p>
+            {errTxt('tags')}
           </div>
 
           <div style={{ ...fld, gridColumn: '1 / -1' }}>

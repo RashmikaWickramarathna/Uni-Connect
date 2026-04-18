@@ -11,6 +11,10 @@ const SocietyRequest = require("../models/societyRequest");
 
 const router = express.Router();
 const PUBLIC_STATUSES = new Set(["approved", "published", "upcoming", "active"]);
+const DEFAULT_GENERAL_TICKET_PRICE = Math.max(
+  1,
+  Number(process.env.DEFAULT_GENERAL_TICKET_PRICE) || 500
+);
 
 const uploadsDir = path.join(__dirname, "..", "..", "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -55,6 +59,10 @@ const normalizeTags = (tags) => {
   return [];
 };
 
+const normalizeText = (value) => String(value || "").trim().replace(/\s+/g, " ");
+
+const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const toDateString = (value) => {
   if (!value) return "";
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -87,27 +95,57 @@ const toBoolean = (value) => {
   return Boolean(value);
 };
 
-const buildDefaultTickets = (seatCount = 100) => [
+const hasOwn = (value, key) =>
+  Boolean(value && Object.prototype.hasOwnProperty.call(value, key));
+
+const isLegacyGeneralFallbackTicket = (ticket, type, rawPrice) => {
+  const description = String(ticket?.description || "").trim().toLowerCase();
+  return (
+    type === "general" &&
+    rawPrice === 0 &&
+    (!description || description === "general admission")
+  );
+};
+
+const inferIsFreeEventFromTickets = (tickets, fallback = false) => {
+  if (!Array.isArray(tickets) || tickets.length === 0) {
+    return fallback;
+  }
+
+  return tickets.every((ticket) => Math.max(0, Number(ticket?.price) || 0) === 0);
+};
+
+const buildDefaultTickets = (seatCount = 100, isFreeEvent = false) => [
   {
     type: "general",
-    price: 0,
+    price: isFreeEvent ? 0 : DEFAULT_GENERAL_TICKET_PRICE,
     totalSeats: seatCount,
-    description: "General admission",
+    description: isFreeEvent ? "Free admission" : "General admission",
   },
 ];
 
-const normalizeTicketEntry = (ticket, fallbackSeats = 100) => {
+const normalizeTicketEntry = (
+  ticket,
+  fallbackSeats = 100,
+  { isFreeEvent = false, allowLegacyPaidFallback = false } = {}
+) => {
+  const type = String(ticket?.type || "general").trim().toLowerCase() || "general";
+  const rawPrice = Number(ticket?.price);
   const totalSeats = Number(ticket?.totalSeats);
   return {
-    type: String(ticket?.type || "general").trim().toLowerCase() || "general",
-    price: Math.max(0, Number(ticket?.price) || 0),
+    type,
+    price: isFreeEvent
+      ? 0
+      : allowLegacyPaidFallback && isLegacyGeneralFallbackTicket(ticket, type, rawPrice)
+        ? DEFAULT_GENERAL_TICKET_PRICE
+        : Math.max(0, Number.isFinite(rawPrice) ? rawPrice : 0),
     totalSeats:
       Number.isFinite(totalSeats) && totalSeats > 0 ? totalSeats : Math.max(1, fallbackSeats),
     description: String(ticket?.description || "").trim(),
   };
 };
 
-const parseTicketsInput = (tickets, fallbackSeats = 100) => {
+const parseTicketsInput = (tickets, fallbackSeats = 100, options = {}) => {
   if (!tickets) return [];
 
   let parsedTickets = tickets;
@@ -120,7 +158,7 @@ const parseTicketsInput = (tickets, fallbackSeats = 100) => {
   }
 
   if (!Array.isArray(parsedTickets)) return [];
-  return parsedTickets.map((ticket) => normalizeTicketEntry(ticket, fallbackSeats));
+  return parsedTickets.map((ticket) => normalizeTicketEntry(ticket, fallbackSeats, options));
 };
 
 const isPopulatedDoc = (value) =>
@@ -144,10 +182,19 @@ const normalizeEventRecord = (event) => {
   const maxParticipants = Number(event?.maxParticipants ?? event?.maxAttendees);
   const fallbackSeats =
     Number.isFinite(maxParticipants) && maxParticipants > 0 ? maxParticipants : 100;
+  const hasExplicitFreeFlag = typeof event?.isFreeEvent === "boolean";
+  const inferredIsFreeEvent = hasExplicitFreeFlag
+    ? event.isFreeEvent
+    : inferIsFreeEventFromTickets(event?.tickets, false);
   const tickets =
     Array.isArray(event?.tickets) && event.tickets.length > 0
-      ? event.tickets.map((ticket) => normalizeTicketEntry(ticket, fallbackSeats))
-      : buildDefaultTickets(fallbackSeats);
+      ? event.tickets.map((ticket) =>
+          normalizeTicketEntry(ticket, fallbackSeats, {
+            isFreeEvent: inferredIsFreeEvent,
+            allowLegacyPaidFallback: !inferredIsFreeEvent && !hasExplicitFreeFlag,
+          })
+        )
+      : buildDefaultTickets(fallbackSeats, inferredIsFreeEvent);
   const totalSeats =
     tickets.reduce((sum, ticket) => sum + Number(ticket.totalSeats || 0), 0) ||
     fallbackSeats;
@@ -179,6 +226,7 @@ const normalizeEventRecord = (event) => {
     totalSeats,
     bookedSeats,
     availableSeats: Math.max(totalSeats - bookedSeats, 0),
+    isFreeEvent: inferredIsFreeEvent,
     status,
     image,
     bannerImage: image,
@@ -248,9 +296,20 @@ const normalizeEventPayload = (data, image = null) => {
   const maxParticipants = Number(data.maxParticipants);
   const safeMaxParticipants =
     Number.isFinite(maxParticipants) && maxParticipants > 0 ? maxParticipants : 100;
-  const tickets = parseTicketsInput(data.tickets, safeMaxParticipants);
+  const hasExplicitFreeFlag = hasOwn(data, "isFreeEvent");
+  const parsedTickets = parseTicketsInput(data.tickets, safeMaxParticipants);
+  const isFreeEvent = hasExplicitFreeFlag
+    ? toBoolean(data.isFreeEvent)
+    : inferIsFreeEventFromTickets(parsedTickets, false);
   const normalizedTickets =
-    tickets.length > 0 ? tickets : buildDefaultTickets(safeMaxParticipants);
+    parsedTickets.length > 0
+      ? parsedTickets.map((ticket) =>
+          normalizeTicketEntry(ticket, safeMaxParticipants, {
+            isFreeEvent,
+            allowLegacyPaidFallback: !isFreeEvent && !hasExplicitFreeFlag,
+          })
+        )
+      : buildDefaultTickets(safeMaxParticipants, isFreeEvent);
   const totalSeats = normalizedTickets.reduce(
     (sum, ticket) => sum + Number(ticket.totalSeats || 0),
     0
@@ -258,18 +317,19 @@ const normalizeEventPayload = (data, image = null) => {
   const status = normalizeStatus(data.status);
 
   return {
-    title: data.title?.trim(),
-    description: data.description?.trim(),
-    shortDescription: data.shortDescription?.trim() || data.description?.trim()?.slice(0, 160),
+    title: normalizeText(data.title),
+    description: String(data.description || "").trim(),
+    shortDescription: normalizeText(data.shortDescription) || String(data.description || "").trim().slice(0, 160),
     date: data.date,
-    time: data.time || null,
-    venue: data.venue?.trim(),
-    category: data.category || "Other",
-    organizer: data.organizer?.trim(),
+    time: String(data.time || "").trim() || null,
+    venue: normalizeText(data.venue),
+    category: normalizeText(data.category) || "Other",
+    organizer: normalizeText(data.organizer),
     organizerEmail: data.organizerEmail?.trim()?.toLowerCase(),
     maxParticipants: safeMaxParticipants,
     tickets: normalizedTickets,
     totalSeats,
+    isFreeEvent,
     isFeatured: toBoolean(data.isFeatured),
     isPublished: toBoolean(data.isPublished) || PUBLIC_STATUSES.has(status),
     status,
@@ -280,22 +340,93 @@ const normalizeEventPayload = (data, image = null) => {
 
 const validate = async (data, excludeId = null) => {
   const errors = [];
-  const { title, description, date, time, venue, organizer, organizerEmail } = data;
+  const {
+    title,
+    description,
+    date,
+    time,
+    venue,
+    organizer,
+    organizerEmail,
+    maxParticipants,
+    tickets,
+    tags,
+  } = data;
+  const normalizedTitle = normalizeText(title);
+  const normalizedVenue = normalizeText(venue);
+  const normalizedDescription = String(description || "").trim();
+  const normalizedTime = String(time || "").trim();
+  const parsedMaxParticipants = Number(maxParticipants);
+  const normalizedTags = normalizeTags(tags);
 
-  if (!title || title.trim().length < 5) errors.push("Title must be at least 5 characters.");
-  if (title && title.trim().length > 100) errors.push("Title cannot exceed 100 characters.");
-  if (!description || description.trim().length < 20) {
+  if (!normalizedTitle || normalizedTitle.length < 5) errors.push("Title must be at least 5 characters.");
+  if (normalizedTitle.length > 100) errors.push("Title cannot exceed 100 characters.");
+  if (!normalizedDescription || normalizedDescription.length < 20) {
     errors.push("Description must be at least 20 characters.");
   }
-  if (description && description.trim().length > 1000) {
+  if (normalizedDescription.length > 1000) {
     errors.push("Description cannot exceed 1000 characters.");
   }
   if (!organizer || !organizer.trim()) errors.push("Organizer is required.");
   if (!organizerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(organizerEmail)) {
     errors.push("Valid email with @ is required.");
   }
-  if (!time) errors.push("Event time is required.");
-  if (!venue || !venue.trim()) errors.push("Venue is required.");
+  if (!normalizedTime) errors.push("Event time is required.");
+  else if (!/^\d{2}:\d{2}$/.test(normalizedTime)) errors.push("Event time must be in HH:MM format.");
+  if (!normalizedVenue) errors.push("Venue is required.");
+  else if (normalizedVenue.length < 3) errors.push("Venue must be at least 3 characters.");
+  else if (normalizedVenue.length > 120) errors.push("Venue cannot exceed 120 characters.");
+
+  if (
+    !Number.isInteger(parsedMaxParticipants) ||
+    parsedMaxParticipants < 1 ||
+    parsedMaxParticipants > 10000
+  ) {
+    errors.push("Max participants must be between 1 and 10000.");
+  }
+
+  if (!Array.isArray(tickets) || tickets.length === 0) {
+    errors.push("At least one ticket option is required.");
+  } else {
+    const totalSeats = tickets.reduce((sum, ticket) => sum + Number(ticket?.totalSeats || 0), 0);
+
+    tickets.forEach((ticket) => {
+      const totalTicketSeats = Number(ticket?.totalSeats);
+      const ticketPrice = Number(ticket?.price);
+      const ticketNote = normalizeText(ticket?.description);
+
+      if (!Number.isInteger(totalTicketSeats) || totalTicketSeats < 1 || totalTicketSeats > 10000) {
+        errors.push("Each ticket type must have between 1 and 10000 seats.");
+      }
+      if (!Number.isFinite(ticketPrice) || ticketPrice < 0) {
+        errors.push("Ticket price must be 0 or more.");
+      }
+      if (ticketNote.length > 120) {
+        errors.push("Ticket note cannot exceed 120 characters.");
+      }
+    });
+
+    if (Number.isInteger(parsedMaxParticipants) && totalSeats > parsedMaxParticipants) {
+      errors.push("Total ticket seats cannot exceed max participants.");
+    }
+  }
+
+  if (normalizedTags.length > 8) {
+    errors.push("Only 8 tags are allowed.");
+  } else {
+    const invalidTag = normalizedTags.find((tag) => tag.length > 24);
+    const duplicateTags = normalizedTags.filter(
+      (tag, index) =>
+        normalizedTags.findIndex((item) => item.toLowerCase() === tag.toLowerCase()) !== index
+    );
+
+    if (invalidTag) {
+      errors.push("Each tag must be 24 characters or fewer.");
+    }
+    if (duplicateTags.length > 0) {
+      errors.push(`Duplicate tags are not allowed: ${[...new Set(duplicateTags)].join(", ")}.`);
+    }
+  }
 
   if (!date) {
     errors.push("Event date is required.");
@@ -307,22 +438,13 @@ const validate = async (data, excludeId = null) => {
     if (date <= todayStr) errors.push("Date must be at least one day in the future.");
   }
 
-  if (date) {
-    const dateQuery = { date };
-    if (excludeId) dateQuery._id = { $ne: excludeId };
-    const existingDate = await Event.findOne(dateQuery);
-    if (existingDate) {
-      errors.push(`"${existingDate.title}" already scheduled on ${date}. Choose a different date.`);
-    }
-  }
-
-  if (date && venue) {
-    const venueQuery = { date, venue: venue.trim() };
+  if (date && normalizedVenue) {
+    const venueQuery = { date, venue: new RegExp(`^${escapeRegex(normalizedVenue)}$`, "i") };
     if (excludeId) venueQuery._id = { $ne: excludeId };
     const existingVenue = await Event.findOne(venueQuery);
     if (existingVenue) {
       errors.push(
-        `"${existingVenue.title}" already using "${venue}" on ${date}. Choose a different venue or date.`
+        `"${existingVenue.title}" already uses "${existingVenue.venue}" on ${date}. Choose a different venue or date.`
       );
     }
   }
@@ -332,6 +454,32 @@ const validate = async (data, excludeId = null) => {
     if (excludeId) organizerQuery._id = { $ne: excludeId };
     const count = await Event.countDocuments(organizerQuery);
     if (count >= 10) errors.push("Society limit of 10 events per day reached.");
+
+    if (normalizedTime) {
+      const sameTimeQuery = { organizerEmail: organizerEmail.toLowerCase(), date, time: normalizedTime };
+      if (excludeId) sameTimeQuery._id = { $ne: excludeId };
+      const existingTime = await Event.findOne(sameTimeQuery);
+      if (existingTime) {
+        errors.push(
+          `"${existingTime.title}" is already scheduled at ${normalizedTime} on ${date} for your society.`
+        );
+      }
+    }
+
+    if (normalizedTitle) {
+      const titleQuery = {
+        organizerEmail: organizerEmail.toLowerCase(),
+        date,
+        title: new RegExp(`^${escapeRegex(normalizedTitle)}$`, "i"),
+      };
+      if (excludeId) titleQuery._id = { $ne: excludeId };
+      const existingTitle = await Event.findOne(titleQuery);
+      if (existingTitle) {
+        errors.push(
+          `"${existingTitle.title}" is already scheduled on ${date} for your society. Update the existing event instead.`
+        );
+      }
+    }
   }
 
   return errors;

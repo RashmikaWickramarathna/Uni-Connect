@@ -240,8 +240,10 @@ export default function SocialDashboard() {
     rejected: events.filter((event) => event.status === 'rejected').length,
   };
 
-  const bookedDates = events.map((event) => ({
+  const existingEvents = events.map((event) => ({
     date: event.date,
+    time: event.time,
+    venue: event.venue,
     title: event.title,
     id: event._id,
   }));
@@ -540,7 +542,7 @@ export default function SocialDashboard() {
                     setEditData(null);
                     setActiveTab('dashboard');
                   }}
-                  bookedDates={bookedDates}
+                  existingEvents={existingEvents}
                   currentUser={user}
                 />
               ) : null}

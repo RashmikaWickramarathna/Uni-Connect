@@ -3,6 +3,60 @@ const SocietyRequest = require("../models/societyRequest");
 const Society = require("../models/society");
 const Event = require("../models/Event");
 
+const DEFAULT_GENERAL_TICKET_PRICE = Math.max(
+  1,
+  Number(process.env.DEFAULT_GENERAL_TICKET_PRICE) || 500
+);
+
+const buildDefaultTickets = (seatCount, isFreeEvent = false) => [
+  {
+    type: "general",
+    price: isFreeEvent ? 0 : DEFAULT_GENERAL_TICKET_PRICE,
+    totalSeats: seatCount,
+    description: isFreeEvent ? "Free admission" : "General admission",
+  },
+];
+
+const toBoolean = (value) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    return ["true", "1", "yes", "on"].includes(value.trim().toLowerCase());
+  }
+  return Boolean(value);
+};
+
+const inferIsFreeEventFromTickets = (tickets, fallback = false) => {
+  if (!Array.isArray(tickets) || tickets.length === 0) {
+    return fallback;
+  }
+
+  return tickets.every((ticket) => Math.max(0, Number(ticket?.price) || 0) === 0);
+};
+
+const parseTickets = (tickets, fallbackSeats, isFreeEvent = false) => {
+  if (!tickets) return buildDefaultTickets(fallbackSeats, isFreeEvent);
+
+  let parsedTickets = tickets;
+  if (typeof tickets === "string") {
+    try {
+      parsedTickets = JSON.parse(tickets);
+    } catch {
+      return buildDefaultTickets(fallbackSeats, isFreeEvent);
+    }
+  }
+
+  if (!Array.isArray(parsedTickets) || parsedTickets.length === 0) {
+    return buildDefaultTickets(fallbackSeats, isFreeEvent);
+  }
+
+  return parsedTickets.map((ticket) => ({
+    type: String(ticket?.type || "general").trim().toLowerCase() || "general",
+    price: isFreeEvent ? 0 : Math.max(0, Number(ticket?.price) || 0),
+    totalSeats: Math.max(1, Number(ticket?.totalSeats) || fallbackSeats),
+    description: String(ticket?.description || "").trim(),
+  }));
+};
+
 const formatDateInput = (value) => {
   if (!value) return null;
 
@@ -109,6 +163,19 @@ const createEvent = async (req, res) => {
     }
 
     const parsedMaxParticipants = Number(eventData.maxParticipants ?? eventData.maxAttendees);
+    const safeMaxParticipants =
+      Number.isFinite(parsedMaxParticipants) && parsedMaxParticipants > 0
+        ? parsedMaxParticipants
+        : 100;
+    const hasExplicitFreeFlag = Object.prototype.hasOwnProperty.call(eventData, "isFreeEvent");
+    const parsedTickets = parseTickets(eventData.tickets, safeMaxParticipants, false);
+    const isFreeEvent = hasExplicitFreeFlag
+      ? toBoolean(eventData.isFreeEvent)
+      : inferIsFreeEventFromTickets(parsedTickets, false);
+    const tickets =
+      parsedTickets.length > 0
+        ? parseTickets(parsedTickets, safeMaxParticipants, isFreeEvent)
+        : buildDefaultTickets(safeMaxParticipants, isFreeEvent);
     const tags = Array.isArray(eventData.tags)
       ? eventData.tags
       : typeof eventData.tags === "string"
@@ -124,10 +191,10 @@ const createEvent = async (req, res) => {
       category: eventData.category || "Other",
       organizer,
       organizerEmail,
-      maxParticipants:
-        Number.isFinite(parsedMaxParticipants) && parsedMaxParticipants > 0
-          ? parsedMaxParticipants
-          : 100,
+      maxParticipants: safeMaxParticipants,
+      tickets,
+      isFreeEvent,
+      totalSeats: tickets.reduce((sum, ticket) => sum + Number(ticket.totalSeats || 0), 0),
       status: eventData.status || "pending",
       image: req.file ? req.file.filename : null,
       tags,

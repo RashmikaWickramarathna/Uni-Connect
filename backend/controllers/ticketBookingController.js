@@ -15,6 +15,60 @@ const Event  = require("../Model/Event");
 const Payment = require("../Model/Payment");
 
 const BOOKABLE_STATUSES = new Set(["approved", "published", "upcoming", "active"]);
+const DEFAULT_GENERAL_TICKET_PRICE = Math.max(
+  1,
+  Number(process.env.DEFAULT_GENERAL_TICKET_PRICE) || 500
+);
+
+const resolveEffectiveTicketPrice = (ticketConfig, isFreeEvent = false) => {
+  if (isFreeEvent) {
+    return 0;
+  }
+
+  const type = String(ticketConfig?.type || "").trim().toLowerCase();
+  const description = String(ticketConfig?.description || "").trim().toLowerCase();
+  const rawPrice = Number(ticketConfig?.price);
+
+  if (
+    type === "general" &&
+    rawPrice === 0 &&
+    (!description || description === "general admission")
+  ) {
+    return DEFAULT_GENERAL_TICKET_PRICE;
+  }
+
+  return Math.max(0, Number.isFinite(rawPrice) ? rawPrice : 0);
+};
+
+const getEventTickets = (event) => {
+  const inferredIsFreeEvent =
+    typeof event?.isFreeEvent === "boolean"
+      ? event.isFreeEvent
+      : Array.isArray(event?.tickets) &&
+        event.tickets.length > 0 &&
+        event.tickets.every((ticket) => Math.max(0, Number(ticket?.price) || 0) === 0);
+
+  if (Array.isArray(event?.tickets) && event.tickets.length > 0) {
+    return event.tickets.map((ticket) => ({
+      ...ticket,
+      price: inferredIsFreeEvent ? 0 : Number(ticket?.price) || 0,
+    }));
+  }
+
+  const fallbackSeats = Math.max(
+    1,
+    Number(event?.totalSeats) || Number(event?.maxParticipants) || 100
+  );
+
+  return [
+    {
+      type: "general",
+      price: inferredIsFreeEvent ? 0 : DEFAULT_GENERAL_TICKET_PRICE,
+      totalSeats: fallbackSeats,
+      description: inferredIsFreeEvent ? "Free admission" : "General admission",
+    },
+  ];
+};
 
 const normalizePaymentMethod = (value, isFree) => {
   if (isFree) return "not_required";
@@ -61,7 +115,7 @@ const createTicketPaymentIntent = async (req, res) => {
     }
 
     // Find ticket config
-    const ticketConfig = event.tickets?.find((t) => t.type === ticketType);
+    const ticketConfig = getEventTickets(event).find((t) => t.type === ticketType);
     if (!ticketConfig) {
       return res.status(400).json({
         message: `Ticket type "${ticketType}" not found for this event`,
@@ -79,7 +133,7 @@ const createTicketPaymentIntent = async (req, res) => {
       });
     }
 
-    const unitPrice   = ticketConfig.price || 0;
+    const unitPrice   = resolveEffectiveTicketPrice(ticketConfig, event.isFreeEvent);
     const totalAmount = unitPrice * quantity;
 
     // Free ticket – skip Stripe
@@ -87,8 +141,8 @@ const createTicketPaymentIntent = async (req, res) => {
       return res.json({
         isFree:     true,
         message:    "This is a free event. Proceed to book directly.",
-        totalAmount: 0,
-        unitPrice:   0,
+        totalAmount,
+        unitPrice,
         quantity,
         eventTitle: event.title,
         eventDate:  event.date,
@@ -186,7 +240,7 @@ const bookTicket = async (req, res) => {
       });
     }
 
-    const ticketConfig = event.tickets?.find((t) => t.type === ticketType);
+    const ticketConfig = getEventTickets(event).find((t) => t.type === ticketType);
     if (!ticketConfig) {
       return res.status(400).json({ message: `Ticket type "${ticketType}" not found` });
     }
@@ -196,7 +250,7 @@ const bookTicket = async (req, res) => {
       return res.status(400).json({ message: "Seats are no longer available" });
     }
 
-    const unitPrice   = ticketConfig.price || 0;
+    const unitPrice   = resolveEffectiveTicketPrice(ticketConfig, event.isFreeEvent);
     const totalAmount = unitPrice * quantity;
     const isFree      = totalAmount === 0;
     const paymentMethod = normalizePaymentMethod(rawPaymentMethod, isFree);
