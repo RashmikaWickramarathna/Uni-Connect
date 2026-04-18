@@ -76,6 +76,19 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
     today.setHours(0, 0, 0, 0);
     return Math.ceil((new Date(`${event.date}T00:00:00`) - today) / (1000 * 60 * 60 * 24));
   })();
+  const imageFrame = {
+    position: "relative",
+    height: "180px",
+    padding: "12px",
+    background: "#f8fafc",
+    borderBottom: "1px solid #e2e8f0",
+  };
+  const imageStyle = {
+    width: "100%",
+    height: "100%",
+    objectFit: "contain",
+    display: "block",
+  };
 
   return (
     <div
@@ -97,12 +110,8 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
       }}
     >
       {imageUrl ? (
-        <div style={{ position: "relative" }}>
-          <img
-            src={imageUrl}
-            alt={title}
-            style={{ width: "100%", height: "180px", objectFit: "cover", display: "block" }}
-          />
+        <div style={imageFrame}>
+          <img src={imageUrl} alt={title} style={imageStyle} />
           <span
             style={{
               position: "absolute",

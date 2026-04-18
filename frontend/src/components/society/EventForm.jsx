@@ -181,6 +181,24 @@ export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDate
   };
 
   const fld = { marginBottom: '18px' };
+  const previewFrame = {
+    width: '100%',
+    height: '180px',
+    padding: '12px',
+    background: '#f8fafc',
+    borderRadius: '10px',
+    border: '1px solid #e2e8f0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  };
+  const previewImage = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
+    display: 'block',
+  };
 
   const errTxt = (name) =>
     errs[name] ? (
@@ -383,18 +401,9 @@ export default function EventForm({ onSubmit, editData, onCancelEdit, bookedDate
             <label style={lbl}>Event Photo (JPG or PNG - max 2MB)</label>
             {imgPrev ? (
               <div>
-                <img
-                  src={imgPrev}
-                  alt="Preview"
-                  style={{
-                    width: '100%',
-                    maxHeight: '220px',
-                    objectFit: 'cover',
-                    borderRadius: '10px',
-                    border: '1px solid #e2e8f0',
-                    display: 'block',
-                  }}
-                />
+                <div style={previewFrame}>
+                  <img src={imgPrev} alt="Preview" style={previewImage} />
+                </div>
                 <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
                   <button type="button" onClick={() => fileRef.current?.click()} style={secBtn}>
                     Change Photo

@@ -29,6 +29,19 @@ export default function EventCard({ event, onEdit, onDelete, onGeneratePost }) {
     return Math.ceil((ev-today)/(1000*60*60*24));
   };
   const days = daysUntil();
+  const cardImageWrap = {
+    position:'relative',
+    height:'180px',
+    padding:'12px',
+    background:'#f8fafc',
+    borderBottom:'1px solid #e2e8f0',
+  };
+  const cardImageStyle = {
+    width:'100%',
+    height:'100%',
+    objectFit:'contain',
+    display:'block',
+  };
 
   return (
     <div style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:'12px',marginBottom:'16px',overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.04)',borderLeft:`4px solid ${cc}`,transition:'box-shadow 0.2s'}}
@@ -36,8 +49,8 @@ export default function EventCard({ event, onEdit, onDelete, onGeneratePost }) {
       onMouseLeave={e=>e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.04)'}>
 
       {img && (
-        <div style={{position:'relative'}}>
-          <img src={img} alt={title} style={{width:'100%',height:'200px',objectFit:'cover',display:'block'}} />
+        <div style={cardImageWrap}>
+          <img src={img} alt={title} style={cardImageStyle} />
           <span style={{position:'absolute',top:'10px',left:'10px',background:cc,color:'#fff',padding:'3px 12px',borderRadius:'20px',fontSize:'11px',fontWeight:700}}>{category}</span>
         </div>
       )}
