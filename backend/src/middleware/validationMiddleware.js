@@ -36,6 +36,8 @@ const validatePhone = (phone) => {
   return /^07[0-9]{8}$/.test(phone?.trim() || '');
 };
 
+const ticketTypeRegex = /^[a-z0-9_]{1,40}$/;
+
 // ─────────────────────────────────────────────
 // 🎟️  Validate Ticket Booking
 // POST /api/tickets/book
@@ -76,9 +78,8 @@ if (faculty && !lowercaseValidFaculties.includes(sanitizeInput(faculty).toLowerC
   if (qty !== undefined && (isNaN(qty) || qty < 1 || qty > 10))
     errors.push({ field: "quantity", message: "Quantity: 1-10 tickets allowed" });
 
-  const validTicketTypes = ["general", "vip", "early_bird", "student", "complimentary"];
-  if (ticketType && !validTicketTypes.includes(ticketType))
-    errors.push({ field: "ticketType", message: `Valid types: ${validTicketTypes.join(", ")}` });
+  if (ticketType && !ticketTypeRegex.test(sanitizeInput(ticketType)))
+    errors.push({ field: "ticketType", message: "Ticket type must use lowercase letters, numbers, or underscores only" });
 
   if (errors.length > 0) return validationError(res, errors);
   next();
@@ -167,8 +168,10 @@ const validateCreateEvent = (req, res, next) => {
     errors.push({ field: "tickets", message: "Tickets must be an array" });
   else if (tickets) {
     tickets.forEach((t, i) => {
-      if (!t.type || !["general", "vip", "early_bird", "student", "complimentary"].includes(t.type))
-        errors.push({ field: `tickets[${i}].type`, message: "Valid ticket type required" });
+      if (!t.type || !ticketTypeRegex.test(sanitizeInput(t.type)))
+        errors.push({ field: `tickets[${i}].type`, message: "Ticket type must use lowercase letters, numbers, or underscores only" });
+      if (!t.label || sanitizeInput(t.label).length < 2 || sanitizeInput(t.label).length > 60)
+        errors.push({ field: `tickets[${i}].label`, message: "Ticket label: 2-60 characters required" });
       if (t.totalSeats === undefined || t.totalSeats < 1 || t.totalSeats > 10000)
         errors.push({ field: `tickets[${i}].totalSeats`, message: "Seats: 1-10000" });
       if (t.price !== undefined && (t.price < 0 || t.price > 1000000))

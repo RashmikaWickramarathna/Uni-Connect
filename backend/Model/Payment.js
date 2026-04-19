@@ -37,6 +37,7 @@ const paymentSchema = new mongoose.Schema(
     eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event" },
     eventName: { type: String },
     ticketType: { type: String },
+    ticketLabel: { type: String },
     quantity: { type: Number, default: 1 },
     ticketId: { type: mongoose.Schema.Types.ObjectId, ref: "Ticket" },
 

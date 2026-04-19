@@ -1,7 +1,23 @@
-import { FiBarChart2, FiBell, FiCalendar, FiClipboard, FiCreditCard, FiFileText, FiHelpCircle, FiHome, FiLogOut, FiMessageSquare, FiSettings, FiUsers } from "react-icons/fi";
+import {
+  FiBell,
+  FiCalendar,
+  FiClipboard,
+  FiCreditCard,
+  FiFileText,
+  FiHelpCircle,
+  FiHome,
+  FiLogOut,
+  FiMessageSquare,
+  FiMonitor,
+  FiMoon,
+  FiSettings,
+  FiSun,
+  FiUsers,
+} from "react-icons/fi";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import "../styles/admin.css";
 
 const menuItems = [
@@ -13,8 +29,7 @@ const menuItems = [
   { label: "Payments", icon: FiCreditCard, path: "/admin/payments" },
   { label: "Feedback", icon: FiMessageSquare, path: "/admin/feedbacks" },
   { label: "Inquiries", icon: FiHelpCircle, path: "/admin/inquiries" },
-  
-  { label: "Settings", icon: FiSettings, disabled: true },
+  { label: "Common Settings", icon: FiSettings, path: "/admin/settings" },
 ];
 
 function isActiveRoute(itemPath, pathname) {
@@ -25,21 +40,12 @@ function isActiveRoute(itemPath, pathname) {
 
 function SidebarItem({ item, pathname }) {
   const Icon = item.icon;
-  const className = `menu-item${isActiveRoute(item.path, pathname) ? " active" : ""}${item.disabled ? " disabled" : ""}`;
-
-  if (item.disabled) {
-    return (
-      <div className={className}>
-        <span className="mi-icon" aria-hidden>
-          <Icon />
-        </span>
-        <span className="mi-label">{item.label}</span>
-      </div>
-    );
-  }
 
   return (
-    <Link to={item.path} className={className}>
+    <Link
+      to={item.path}
+      className={`menu-item${isActiveRoute(item.path, pathname) ? " active" : ""}`}
+    >
       <span className="mi-icon" aria-hidden>
         <Icon />
       </span>
@@ -56,10 +62,16 @@ export default function AdminLayout({
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { theme, resolvedTheme, toggleTheme } = useTheme();
 
-  const content = typeof children === "function" ? children({ pathname: location.pathname }) : children;
+  const content =
+    typeof children === "function" ? children({ pathname: location.pathname }) : children;
   const displayName = user?.name || "Admin";
   const displayEmail = user?.email || "admin@uni-connect.edu";
+  const avatarLetter = displayName.charAt(0).toUpperCase() || "A";
+  const ThemeIcon = theme === "system" ? FiMonitor : resolvedTheme === "dark" ? FiSun : FiMoon;
+  const themeLabel =
+    theme === "system" ? "System theme" : resolvedTheme === "dark" ? "Light mode" : "Dark mode";
 
   const handleLogout = () => {
     logout();
@@ -90,7 +102,7 @@ export default function AdminLayout({
           <span className="mi-label">Logout</span>
         </button>
 
-        <div className="sidebar-footer">v1.0 • Uni-Connect</div>
+        <div className="sidebar-footer">v1.0 • Uni-Connect • {resolvedTheme}</div>
       </aside>
 
       <div className="admin-main">
@@ -101,12 +113,22 @@ export default function AdminLayout({
           </div>
 
           <div className="topbar-right">
+            <button
+              className="icon-btn icon-btn-theme"
+              type="button"
+              onClick={toggleTheme}
+              aria-label={themeLabel}
+              title={themeLabel}
+            >
+              <ThemeIcon />
+            </button>
+
             <button className="icon-btn" type="button" aria-label="Notifications">
               <FiBell />
             </button>
 
             <div className="profile">
-              <div className="avatar">A</div>
+              <div className="avatar">{avatarLetter}</div>
               <div className="profile-info">
                 <div className="name">{displayName}</div>
                 <div className="email">{displayEmail}</div>

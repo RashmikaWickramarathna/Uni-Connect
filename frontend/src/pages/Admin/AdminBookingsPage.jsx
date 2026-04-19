@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import AdminLayout from "../../components/AdminLayout";
+import { humanizeTicketType } from "../../utils/ticketUtils";
 import "./AdminBookingsPage.css";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -151,6 +152,8 @@ export default function AdminBookingsPage() {
     return matchSearch && matchStatus && matchMethod;
   });
 
+  const getTicketName = (ticket) => ticket.ticketLabel || humanizeTicketType(ticket.ticketType);
+
   return (
     <AdminLayout
       title="Ticket Reservations"
@@ -288,7 +291,7 @@ export default function AdminBookingsPage() {
                             )}
                           </td>
                           <td>
-                            <div className="ab-type">{ticket.ticketType?.replaceAll("_", " ") || "-"}</div>
+                            <div className="ab-type">{getTicketName(ticket) || "-"}</div>
                             <div className="ab-qty">x {ticket.quantity}</div>
                           </td>
                           <td className="ab-amount">

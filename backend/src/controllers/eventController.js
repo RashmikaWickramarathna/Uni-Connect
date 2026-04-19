@@ -2,20 +2,13 @@ const fs = require("fs");
 const SocietyRequest = require("../models/societyRequest");
 const Society = require("../models/society");
 const Event = require("../models/Event");
-
-const DEFAULT_GENERAL_TICKET_PRICE = Math.max(
-  1,
-  Number(process.env.DEFAULT_GENERAL_TICKET_PRICE) || 500
-);
-
-const buildDefaultTickets = (seatCount, isFreeEvent = false) => [
-  {
-    type: "general",
-    price: isFreeEvent ? 0 : DEFAULT_GENERAL_TICKET_PRICE,
-    totalSeats: seatCount,
-    description: isFreeEvent ? "Free admission" : "General admission",
-  },
-];
+const {
+  buildDefaultTickets,
+  inferIsFreeEventFromTickets,
+  normalizeTicketEntry,
+  parseTicketsInput,
+  validateUniqueTicketTypes,
+} = require("../utils/ticketing");
 
 const toBoolean = (value) => {
   if (typeof value === "boolean") return value;
@@ -23,38 +16,6 @@ const toBoolean = (value) => {
     return ["true", "1", "yes", "on"].includes(value.trim().toLowerCase());
   }
   return Boolean(value);
-};
-
-const inferIsFreeEventFromTickets = (tickets, fallback = false) => {
-  if (!Array.isArray(tickets) || tickets.length === 0) {
-    return fallback;
-  }
-
-  return tickets.every((ticket) => Math.max(0, Number(ticket?.price) || 0) === 0);
-};
-
-const parseTickets = (tickets, fallbackSeats, isFreeEvent = false) => {
-  if (!tickets) return buildDefaultTickets(fallbackSeats, isFreeEvent);
-
-  let parsedTickets = tickets;
-  if (typeof tickets === "string") {
-    try {
-      parsedTickets = JSON.parse(tickets);
-    } catch {
-      return buildDefaultTickets(fallbackSeats, isFreeEvent);
-    }
-  }
-
-  if (!Array.isArray(parsedTickets) || parsedTickets.length === 0) {
-    return buildDefaultTickets(fallbackSeats, isFreeEvent);
-  }
-
-  return parsedTickets.map((ticket) => ({
-    type: String(ticket?.type || "general").trim().toLowerCase() || "general",
-    price: isFreeEvent ? 0 : Math.max(0, Number(ticket?.price) || 0),
-    totalSeats: Math.max(1, Number(ticket?.totalSeats) || fallbackSeats),
-    description: String(ticket?.description || "").trim(),
-  }));
 };
 
 const formatDateInput = (value) => {
@@ -168,14 +129,30 @@ const createEvent = async (req, res) => {
         ? parsedMaxParticipants
         : 100;
     const hasExplicitFreeFlag = Object.prototype.hasOwnProperty.call(eventData, "isFreeEvent");
-    const parsedTickets = parseTickets(eventData.tickets, safeMaxParticipants, false);
+    const parsedTickets = parseTicketsInput(eventData.tickets, safeMaxParticipants);
     const isFreeEvent = hasExplicitFreeFlag
       ? toBoolean(eventData.isFreeEvent)
       : inferIsFreeEventFromTickets(parsedTickets, false);
     const tickets =
       parsedTickets.length > 0
-        ? parseTickets(parsedTickets, safeMaxParticipants, isFreeEvent)
+        ? parsedTickets.map((ticket, index) =>
+            normalizeTicketEntry(ticket, safeMaxParticipants, {
+              isFreeEvent,
+              index,
+            })
+          )
         : buildDefaultTickets(safeMaxParticipants, isFreeEvent);
+
+    if (!validateUniqueTicketTypes(tickets)) {
+      cleanupUploadedFile(req.file);
+      return res.status(400).json({ message: "Each ticket option must use a unique ticket type." });
+    }
+
+    const invalidTicketLabel = tickets.find((ticket) => String(ticket?.label || "").trim().length < 2);
+    if (invalidTicketLabel) {
+      cleanupUploadedFile(req.file);
+      return res.status(400).json({ message: "Every ticket option must include a label." });
+    }
     const tags = Array.isArray(eventData.tags)
       ? eventData.tags
       : typeof eventData.tags === "string"

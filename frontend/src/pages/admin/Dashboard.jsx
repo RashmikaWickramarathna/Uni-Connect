@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FiCalendar, FiClipboard, FiCreditCard, FiFileText, FiHelpCircle, FiInfo, FiMessageSquare } from 'react-icons/fi';
+import { FiCalendar, FiClipboard, FiCreditCard, FiFileText, FiHelpCircle, FiMessageSquare, FiSettings } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 import AdminLayout from '../../components/AdminLayout';
@@ -180,19 +180,19 @@ export default function Dashboard() {
               </div>
             </Link>
 
-            <div className="module-card">
+            <Link className="module-card module-card-link" to="/admin/settings">
               <div className="module-card-head">
                 <div className="module-icon system">
-                  <FiInfo />
+                  <FiSettings />
                 </div>
               </div>
-              <h4 className="module-title">System Info</h4>
-              <p className="module-description">Uni-Connect admin panel running with the sidebar-based interface and unified module access.</p>
+              <h4 className="module-title">Common Settings</h4>
+              <p className="module-description">Manage dark mode and shared interface preferences from one place in the admin workspace.</p>
               <div className="module-meta">
                 <span className="pill-dot" />
-                System v1.0
+                Open settings
               </div>
-            </div>
+            </Link>
           </div>
         </>
       )}

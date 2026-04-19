@@ -1,6 +1,3 @@
-// backend/controllers/ticketBookingController.js
-// UniConnect – Ticket Booking Controller
-
 let stripe = null;
 
 if (process.env.STRIPE_SECRET_KEY) {
@@ -10,64 +7,43 @@ if (process.env.STRIPE_SECRET_KEY) {
     console.warn('Stripe SDK is unavailable. Install the "stripe" package to enable online payment intents.');
   }
 }
+
 const Ticket = require("../Model/Ticket");
-const Event  = require("../Model/Event");
+const Event = require("../Model/Event");
 const Payment = require("../Model/Payment");
+const {
+  buildDefaultTickets,
+  getTicketLabel,
+  humanizeTicketType,
+  inferIsFreeEventFromTickets,
+  normalizeTicketEntry,
+} = require("../src/utils/ticketing");
 
 const BOOKABLE_STATUSES = new Set(["approved", "published", "upcoming", "active"]);
-const DEFAULT_GENERAL_TICKET_PRICE = Math.max(
-  1,
-  Number(process.env.DEFAULT_GENERAL_TICKET_PRICE) || 500
-);
 
-const resolveEffectiveTicketPrice = (ticketConfig, isFreeEvent = false) => {
-  if (isFreeEvent) {
-    return 0;
-  }
-
-  const type = String(ticketConfig?.type || "").trim().toLowerCase();
-  const description = String(ticketConfig?.description || "").trim().toLowerCase();
-  const rawPrice = Number(ticketConfig?.price);
-
-  if (
-    type === "general" &&
-    rawPrice === 0 &&
-    (!description || description === "general admission")
-  ) {
-    return DEFAULT_GENERAL_TICKET_PRICE;
-  }
-
-  return Math.max(0, Number.isFinite(rawPrice) ? rawPrice : 0);
-};
+const resolveEffectiveTicketPrice = (ticketConfig, isFreeEvent = false) =>
+  isFreeEvent ? 0 : Math.max(0, Number(ticketConfig?.price) || 0);
 
 const getEventTickets = (event) => {
   const inferredIsFreeEvent =
     typeof event?.isFreeEvent === "boolean"
       ? event.isFreeEvent
-      : Array.isArray(event?.tickets) &&
-        event.tickets.length > 0 &&
-        event.tickets.every((ticket) => Math.max(0, Number(ticket?.price) || 0) === 0);
-
-  if (Array.isArray(event?.tickets) && event.tickets.length > 0) {
-    return event.tickets.map((ticket) => ({
-      ...ticket,
-      price: inferredIsFreeEvent ? 0 : Number(ticket?.price) || 0,
-    }));
-  }
-
+      : inferIsFreeEventFromTickets(event?.tickets, false);
   const fallbackSeats = Math.max(
     1,
     Number(event?.totalSeats) || Number(event?.maxParticipants) || 100
   );
 
-  return [
-    {
-      type: "general",
-      price: inferredIsFreeEvent ? 0 : DEFAULT_GENERAL_TICKET_PRICE,
-      totalSeats: fallbackSeats,
-      description: inferredIsFreeEvent ? "Free admission" : "General admission",
-    },
-  ];
+  if (Array.isArray(event?.tickets) && event.tickets.length > 0) {
+    return event.tickets.map((ticket, index) =>
+      normalizeTicketEntry(ticket, fallbackSeats, {
+        isFreeEvent: inferredIsFreeEvent,
+        index,
+      })
+    );
+  }
+
+  return buildDefaultTickets(fallbackSeats, inferredIsFreeEvent);
 };
 
 const normalizePaymentMethod = (value, isFree) => {
@@ -77,10 +53,6 @@ const normalizePaymentMethod = (value, isFree) => {
   return ["cash", "bank_transfer", "online"].includes(normalized) ? normalized : "cash";
 };
 
-// ─────────────────────────────────────────────
-// 🎟️  Create Stripe Payment Intent for a Ticket
-// POST /api/tickets/create-intent
-// ─────────────────────────────────────────────
 const createTicketPaymentIntent = async (req, res) => {
   try {
     const {
@@ -89,19 +61,18 @@ const createTicketPaymentIntent = async (req, res) => {
       studentId,
       email,
       ticketType = "general",
-      quantity   = 1,
+      quantity = 1,
     } = req.body;
 
-    // Validate event
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
+
     if (!BOOKABLE_STATUSES.has(String(event.status).toLowerCase()) && !event.isPublished) {
       return res.status(400).json({ message: "This event is not available for booking" });
     }
 
-    // ── Prevent same student booking same event twice ──
     const existingBooking = await Ticket.findOne({
       eventId,
       studentId,
@@ -114,43 +85,42 @@ const createTicketPaymentIntent = async (req, res) => {
       });
     }
 
-    // Find ticket config
-    const ticketConfig = getEventTickets(event).find((t) => t.type === ticketType);
+    const ticketConfig = getEventTickets(event).find((ticket) => ticket.type === ticketType);
     if (!ticketConfig) {
       return res.status(400).json({
         message: `Ticket type "${ticketType}" not found for this event`,
       });
     }
 
-    // Check seat availability
-    const bookedCount = await Ticket.countConfirmedForEvent(eventId, ticketType);
-    const available   = ticketConfig.totalSeats - bookedCount;
+    const ticketLabel = getTicketLabel(ticketConfig);
+    const reservedSeats = await Ticket.countConfirmedForEvent(eventId, ticketType);
+    const availableSeats = Math.max(Number(ticketConfig.totalSeats || 0) - reservedSeats, 0);
 
-    if (available < quantity) {
+    if (availableSeats < quantity) {
       return res.status(400).json({
-        message: `Only ${available} seat(s) remaining for "${ticketType}"`,
-        availableSeats: available,
+        message: `Only ${availableSeats} seat(s) remaining for "${ticketLabel}"`,
+        availableSeats,
       });
     }
 
-    const unitPrice   = resolveEffectiveTicketPrice(ticketConfig, event.isFreeEvent);
+    const unitPrice = resolveEffectiveTicketPrice(ticketConfig, event.isFreeEvent);
     const totalAmount = unitPrice * quantity;
 
-    // Free ticket – skip Stripe
     if (totalAmount === 0) {
       return res.json({
-        isFree:     true,
-        message:    "This is a free event. Proceed to book directly.",
+        isFree: true,
+        message: "This is a free event. Proceed to book directly.",
         totalAmount,
         unitPrice,
         quantity,
+        ticketLabel,
         eventTitle: event.title,
-        eventDate:  event.date,
-        venue:      event.venue,
+        eventDate: event.date,
+        venue: event.venue,
+        availableSeats,
       });
     }
 
-    // Paid ticket – create Stripe intent
     if (!stripe) {
       return res.status(503).json({
         message: "Stripe is not configured. Online payment intents are unavailable in this environment.",
@@ -158,41 +128,39 @@ const createTicketPaymentIntent = async (req, res) => {
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount:   Math.round(totalAmount * 100),
+      amount: Math.round(totalAmount * 100),
       currency: "lkr",
       metadata: {
-        event_id:     eventId.toString(),
-        event_name:   event.title,
-        student_id:   studentId,
+        event_id: eventId.toString(),
+        event_name: event.title,
+        student_id: studentId,
         student_name: studentName,
         email,
-        ticket_type:  ticketType,
-        quantity:     quantity.toString(),
+        ticket_type: ticketType,
+        ticket_label: ticketLabel,
+        quantity: quantity.toString(),
       },
       automatic_payment_methods: { enabled: true },
     });
 
-    res.json({
-      clientSecret:   paymentIntent.client_secret,
+    return res.json({
+      clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       totalAmount,
       unitPrice,
       quantity,
-      eventTitle:     event.title,
-      eventDate:      event.date,
-      venue:          event.venue,
-      availableSeats: available,
+      ticketLabel,
+      eventTitle: event.title,
+      eventDate: event.date,
+      venue: event.venue,
+      availableSeats,
     });
-  } catch (err) {
-    console.error("❌ Create Ticket Intent Error:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("Create Ticket Intent Error:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// ─────────────────────────────────────────────
-// 📌  Book a Ticket (free or after Stripe payment)
-// POST /api/tickets/book
-// ─────────────────────────────────────────────
 const bookTicket = async (req, res) => {
   try {
     const {
@@ -202,32 +170,29 @@ const bookTicket = async (req, res) => {
       email,
       phone,
       faculty,
-      ticketType      = "general",
-      quantity        = 1,
+      ticketType = "general",
+      quantity = 1,
       paymentMethod: rawPaymentMethod,
       paymentDetails = null,
       paymentIntentId = null,
-      stripeStatus    = "succeeded",
+      stripeStatus = "succeeded",
     } = req.body;
 
-    // Validate event
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    // Prevent duplicate booking for same paymentIntentId
     if (paymentIntentId) {
       const duplicate = await Ticket.findOne({ paymentIntentId });
       if (duplicate) {
         return res.json({
           message: "Ticket already booked for this payment",
-          ticket:  duplicate,
+          ticket: duplicate,
         });
       }
     }
 
-    // ── Prevent same student booking same event twice ──
     const existingBooking = await Ticket.findOne({
       eventId,
       studentId,
@@ -235,42 +200,38 @@ const bookTicket = async (req, res) => {
     });
     if (existingBooking) {
       return res.status(400).json({
-        message:      "You have already booked a ticket for this event.",
+        message: "You have already booked a ticket for this event.",
         ticketNumber: existingBooking.ticketNumber,
       });
     }
 
-    const ticketConfig = getEventTickets(event).find((t) => t.type === ticketType);
+    const ticketConfig = getEventTickets(event).find((ticket) => ticket.type === ticketType);
     if (!ticketConfig) {
       return res.status(400).json({ message: `Ticket type "${ticketType}" not found` });
     }
 
-    const bookedCount = await Ticket.countConfirmedForEvent(eventId, ticketType);
-    if (ticketConfig.totalSeats - bookedCount < quantity) {
-      return res.status(400).json({ message: "Seats are no longer available" });
+    const ticketLabel = getTicketLabel(ticketConfig);
+    const reservedSeats = await Ticket.countConfirmedForEvent(eventId, ticketType);
+    if (Number(ticketConfig.totalSeats || 0) - reservedSeats < quantity) {
+      return res.status(400).json({ message: `${ticketLabel} seats are no longer available` });
     }
 
-    const unitPrice   = resolveEffectiveTicketPrice(ticketConfig, event.isFreeEvent);
+    const unitPrice = resolveEffectiveTicketPrice(ticketConfig, event.isFreeEvent);
     const totalAmount = unitPrice * quantity;
-    const isFree      = totalAmount === 0;
+    const isFree = totalAmount === 0;
     const paymentMethod = normalizePaymentMethod(rawPaymentMethod, isFree);
 
-    // Determine payment status
-    let paymentStatus;
+    let paymentStatus = "pending";
     if (isFree) {
       paymentStatus = "not_required";
     } else if (paymentMethod === "cash") {
       paymentStatus = "pending";
     } else if (stripeStatus === "succeeded" || ["bank_transfer", "online"].includes(paymentMethod)) {
       paymentStatus = "paid";
-    } else {
-      paymentStatus = "pending";
     }
 
     const ticketStatus =
-      paymentStatus === "paid" || paymentStatus === "not_required"
-        ? "confirmed"
-        : "pending";
+      paymentStatus === "paid" || paymentStatus === "not_required" ? "confirmed" : "pending";
 
     let payment = null;
     if (paymentMethod !== "not_required" || isFree) {
@@ -287,13 +248,14 @@ const bookTicket = async (req, res) => {
         eventId,
         eventName: event.title,
         ticketType,
+        ticketLabel,
         quantity,
         notes:
           paymentDetails && typeof paymentDetails === "object"
             ? JSON.stringify(paymentDetails)
             : undefined,
         metadata: {
-          description: `Ticket – ${event.title} (${ticketType} × ${quantity})`,
+          description: `Ticket – ${event.title} (${ticketLabel || humanizeTicketType(ticketType)} × ${quantity})`,
         },
       });
 
@@ -302,15 +264,16 @@ const bookTicket = async (req, res) => {
 
     const ticket = new Ticket({
       eventId,
-      eventTitle:      event.title,
-      eventDate:       event.date,
-      venue:           event.venue,
+      eventTitle: event.title,
+      eventDate: event.date,
+      venue: event.venue,
       studentName,
       studentId,
       email,
       phone,
       faculty,
       ticketType,
+      ticketLabel,
       quantity,
       unitPrice,
       totalAmount,
@@ -319,8 +282,8 @@ const bookTicket = async (req, res) => {
       paymentMethod,
       paymentDetails,
       paymentId: payment?._id || undefined,
-      status:          ticketStatus,
-      bookedAt:        new Date(),
+      status: ticketStatus,
+      bookedAt: new Date(),
     });
 
     await ticket.save();
@@ -330,30 +293,23 @@ const bookTicket = async (req, res) => {
       await payment.save();
     }
 
-    // Email feature removed per user request
-
-    // Increment event's booked seat counter
     await Event.findByIdAndUpdate(eventId, {
       $inc: { bookedSeats: quantity },
     });
 
-    res.status(201).json({
-      message:      "🎉 Ticket booked successfully!",
+    return res.status(201).json({
+      message: "Ticket booked successfully.",
       ticket,
       ticketNumber: ticket.ticketNumber,
       payment,
       receiptNumber: payment?.receiptNumber || null,
     });
-  } catch (err) {
-    console.error("❌ Book Ticket Error:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("Book Ticket Error:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// ─────────────────────────────────────────────
-// 🔍  Get Single Ticket by Ticket Number
-// GET /api/tickets/:ticketNumber
-// ─────────────────────────────────────────────
 const getTicketByNumber = async (req, res) => {
   try {
     const ticket = await Ticket.findOne({
@@ -364,61 +320,49 @@ const getTicketByNumber = async (req, res) => {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
-    res.json(ticket);
-  } catch (err) {
-    console.error("❌ Get Ticket Error:", err);
-    res.status(500).json({ error: err.message });
+    return res.json(ticket);
+  } catch (error) {
+    console.error("Get Ticket Error:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// ─────────────────────────────────────────────
-// 📋  Get All Tickets Booked by a Student
-// GET /api/tickets/student/:studentId
-// ─────────────────────────────────────────────
 const getTicketsByStudent = async (req, res) => {
   try {
     const tickets = await Ticket.find({ studentId: req.params.studentId })
       .sort({ bookedAt: -1 })
       .populate("eventId", "title date venue bannerImage status");
 
-    res.json(tickets);
-  } catch (err) {
-    console.error("❌ Get Student Tickets Error:", err);
-    res.status(500).json({ error: err.message });
+    return res.json(tickets);
+  } catch (error) {
+    console.error("Get Student Tickets Error:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// ─────────────────────────────────────────────
-// 📋  Get All Tickets for an Event (Admin)
-// GET /api/tickets/event/:eventId
-// ─────────────────────────────────────────────
 const getTicketsByEvent = async (req, res) => {
   try {
     const tickets = await Ticket.find({ eventId: req.params.eventId }).sort({ bookedAt: -1 });
 
     const summary = {
-      total:        tickets.length,
-      confirmed:    tickets.filter((t) => t.status === "confirmed").length,
-      pending:      tickets.filter((t) => t.status === "pending").length,
-      cancelled:    tickets.filter((t) => t.status === "cancelled").length,
-      used:         tickets.filter((t) => t.status === "used").length,
-      checkedIn:    tickets.filter((t) => t.checkedIn).length,
+      total: tickets.length,
+      confirmed: tickets.filter((ticket) => ticket.status === "confirmed").length,
+      pending: tickets.filter((ticket) => ticket.status === "pending").length,
+      cancelled: tickets.filter((ticket) => ticket.status === "cancelled").length,
+      used: tickets.filter((ticket) => ticket.status === "used").length,
+      checkedIn: tickets.filter((ticket) => ticket.checkedIn).length,
       totalRevenue: tickets
-        .filter((t) => t.paymentStatus === "paid")
-        .reduce((sum, t) => sum + t.totalAmount, 0),
+        .filter((ticket) => ticket.paymentStatus === "paid")
+        .reduce((sum, ticket) => sum + Number(ticket.totalAmount || 0), 0),
     };
 
-    res.json({ tickets, summary });
-  } catch (err) {
-    console.error("❌ Get Event Tickets Error:", err);
-    res.status(500).json({ error: err.message });
+    return res.json({ tickets, summary });
+  } catch (error) {
+    console.error("Get Event Tickets Error:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// ─────────────────────────────────────────────
-// ❌  Cancel a Ticket
-// PATCH /api/tickets/:ticketNumber/cancel
-// ─────────────────────────────────────────────
 const cancelTicket = async (req, res) => {
   try {
     const { reason } = req.body;
@@ -437,27 +381,22 @@ const cancelTicket = async (req, res) => {
       return res.status(400).json({ message: "Cannot cancel a ticket for a past event" });
     }
 
-    ticket.status             = "cancelled";
+    ticket.status = "cancelled";
     ticket.cancellationReason = reason || "Cancelled by student";
-    ticket.cancelledAt        = new Date();
+    ticket.cancelledAt = new Date();
     await ticket.save();
 
-    // Restore seat count on the event
     await Event.findByIdAndUpdate(ticket.eventId, {
       $inc: { bookedSeats: -ticket.quantity },
     });
 
-    res.json({ message: "✅ Ticket cancelled successfully", ticket });
-  } catch (err) {
-    console.error("❌ Cancel Ticket Error:", err);
-    res.status(500).json({ error: err.message });
+    return res.json({ message: "Ticket cancelled successfully", ticket });
+  } catch (error) {
+    console.error("Cancel Ticket Error:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// ─────────────────────────────────────────────
-// ✅  Check-in Ticket at Event Entrance
-// PATCH /api/tickets/:ticketNumber/checkin
-// ─────────────────────────────────────────────
 const checkInTicket = async (req, res) => {
   try {
     const ticket = await Ticket.findOne({ ticketNumber: req.params.ticketNumber });
@@ -470,80 +409,69 @@ const checkInTicket = async (req, res) => {
     }
     if (ticket.checkedIn) {
       return res.status(400).json({
-        message:     "Ticket has already been checked in",
+        message: "Ticket has already been checked in",
         checkedInAt: ticket.checkedInAt,
       });
     }
     if (ticket.paymentStatus === "failed") {
-      return res.status(400).json({ message: "Cannot check in – payment failed" });
+      return res.status(400).json({ message: "Cannot check in: payment failed" });
     }
 
-    ticket.checkedIn    = true;
-    ticket.checkedInAt  = new Date();
-    ticket.status       = "used";
+    ticket.checkedIn = true;
+    ticket.checkedInAt = new Date();
+    ticket.status = "used";
     await ticket.save();
 
-    res.json({
-      message:     "✅ Check-in successful!",
+    return res.json({
+      message: "Check-in successful.",
       ticketNumber: ticket.ticketNumber,
-      studentName:  ticket.studentName,
-      studentId:    ticket.studentId,
-      eventTitle:   ticket.eventTitle,
-      ticketType:   ticket.ticketType,
-      quantity:     ticket.quantity,
+      studentName: ticket.studentName,
+      studentId: ticket.studentId,
+      eventTitle: ticket.eventTitle,
+      ticketType: ticket.ticketType,
+      ticketLabel: ticket.ticketLabel,
+      quantity: ticket.quantity,
     });
-  } catch (err) {
-    console.error("❌ Check-in Error:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("Check-in Error:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// ─────────────────────────────────────────────
-// 📊  Get Ticket Stats (Admin)
-// GET /api/tickets/stats
-// ─────────────────────────────────────────────
-const getTicketStats = async (req, res) => {
+const getTicketStats = async (_req, res) => {
   try {
     const totalTickets = await Ticket.countDocuments();
-    const confirmed    = await Ticket.countDocuments({ status: "confirmed" });
-    const pending      = await Ticket.countDocuments({ status: "pending" });
-    const cancelled    = await Ticket.countDocuments({ status: "cancelled" });
-    const used         = await Ticket.countDocuments({ status: "used" });
+    const confirmed = await Ticket.countDocuments({ status: "confirmed" });
+    const pending = await Ticket.countDocuments({ status: "pending" });
+    const cancelled = await Ticket.countDocuments({ status: "cancelled" });
+    const used = await Ticket.countDocuments({ status: "used" });
 
-    res.json({ totalTickets, confirmed, pending, cancelled, used });
-  } catch (err) {
-    console.error("❌ Get Ticket Stats Error:", err);
-    res.status(500).json({ error: err.message });
+    return res.json({ totalTickets, confirmed, pending, cancelled, used });
+  } catch (error) {
+    console.error("Get Ticket Stats Error:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// ─────────────────────────────────────────────
-// 🔐 Verify Student Tickets by ID + Email (Secure)
-// GET /api/tickets/verify/:studentId/:email
-// ─────────────────────────────────────────────
 const verifyStudentTicket = async (req, res) => {
   try {
     const { studentId, email } = req.params;
-    
+
     if (!studentId || !email) {
       return res.status(400).json({ message: "Student ID and email required" });
     }
 
-    const tickets = await Ticket.find({ 
-      studentId: studentId.trim(), 
-      email: email.trim().toLowerCase() 
+    const tickets = await Ticket.find({
+      studentId: studentId.trim(),
+      email: email.trim().toLowerCase(),
     })
       .sort({ bookedAt: -1 })
       .populate("eventId", "title date venue bannerImage status");
 
-    if (tickets.length === 0) {
-      return res.json([]);
-    }
-
-    res.json(tickets);
-  } catch (err) {
-    console.error("❌ Verify Student Tickets Error:", err);
-    res.status(500).json({ error: err.message });
+    return res.json(tickets);
+  } catch (error) {
+    console.error("Verify Student Tickets Error:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
 

@@ -1,16 +1,22 @@
 const mongoose = require("mongoose");
-
-const DEFAULT_GENERAL_TICKET_PRICE = Math.max(
-  1,
-  Number(process.env.DEFAULT_GENERAL_TICKET_PRICE) || 500
-);
+const {
+  buildDefaultTickets,
+  inferIsFreeEventFromTickets,
+  normalizeTicketEntry,
+} = require("../utils/ticketing");
 
 const ticketTypeSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["general", "vip", "early_bird", "student", "complimentary"],
+      trim: true,
       default: "general",
+    },
+    label: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 60,
     },
     price: {
       type: Number,
@@ -226,29 +232,22 @@ eventSchema.pre("save", function preSave(next) {
     Number.isFinite(Number(this.maxParticipants)) && Number(this.maxParticipants) > 0
       ? Number(this.maxParticipants)
       : 100;
+  const inferredIsFreeEvent =
+    typeof this.isFreeEvent === "boolean"
+      ? this.isFreeEvent
+      : inferIsFreeEventFromTickets(this.tickets, false);
 
   if (!Array.isArray(this.tickets) || this.tickets.length === 0) {
-    this.tickets = [
-      {
-        type: "general",
-        price: this.isFreeEvent ? 0 : DEFAULT_GENERAL_TICKET_PRICE,
-        totalSeats: fallbackSeats,
-        description: this.isFreeEvent ? "Free admission" : "General admission",
-      },
-    ];
+    this.tickets = buildDefaultTickets(fallbackSeats, inferredIsFreeEvent);
   }
 
-  if (this.isFreeEvent) {
-    this.tickets = this.tickets.map((ticket) => ({
-      type: String(ticket?.type || "general").trim().toLowerCase() || "general",
-      price: 0,
-      totalSeats:
-        Number.isFinite(Number(ticket?.totalSeats)) && Number(ticket?.totalSeats) > 0
-          ? Number(ticket.totalSeats)
-          : fallbackSeats,
-      description: String(ticket?.description || "").trim() || "Free admission",
-    }));
-  }
+  this.tickets = this.tickets.map((ticket, index) =>
+    normalizeTicketEntry(ticket, fallbackSeats, {
+      isFreeEvent: inferredIsFreeEvent,
+      index,
+    })
+  );
+  this.isFreeEvent = inferredIsFreeEvent;
 
   this.totalSeats = this.tickets.reduce((sum, ticket) => sum + Number(ticket.totalSeats || 0), 0);
 

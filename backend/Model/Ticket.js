@@ -25,8 +25,13 @@ const ticketSchema = new mongoose.Schema(
     // ── Ticket Details ───────────────────────
     ticketType: {
       type:    String,
-      enum:    ["general", "vip", "early_bird", "student", "complimentary"],
       default: "general",
+      trim: true,
+    },
+    ticketLabel: {
+      type: String,
+      default: "",
+      trim: true,
     },
     quantity:    { type: Number, default: 1, min: 1 },
     unitPrice:   { type: Number, default: 0 },
@@ -129,7 +134,7 @@ ticketSchema.statics.findByEvent = function (eventId) {
 };
 
 ticketSchema.statics.countConfirmedForEvent = function (eventId, ticketType) {
-  const filter = { eventId, status: { $in: ["confirmed", "used"] } };
+  const filter = { eventId, status: { $in: ["pending", "confirmed", "used"] } };
   if (ticketType) filter.ticketType = ticketType;
   return this.countDocuments(filter);
 };

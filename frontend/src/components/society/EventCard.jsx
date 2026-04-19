@@ -1,5 +1,6 @@
 import React from 'react';
 import { getImageUrl } from '../../api/societyPortalApi';
+import { formatTicketLabel, formatTicketPrice } from '../../utils/ticketUtils';
 
 const CC = { Academic:'#2563eb', Sports:'#16a34a', Cultural:'#d97706', Social:'#db2777', Workshop:'#7c3aed', Other:'#64748b' };
 const SC = {
@@ -18,8 +19,9 @@ export default function EventCard({ event, onEdit, onDelete, onGeneratePost }) {
   const venue = event.venue || 'TBA';
   const category = event.category || 'Other';
   const maxParticipants = event.maxParticipants || 100;
-  const generalTicket = Array.isArray(event.tickets)
-    ? event.tickets.find((ticket) => String(ticket?.type).toLowerCase() === 'general')
+  const ticketOptions = Array.isArray(event.tickets) ? event.tickets : [];
+  const minPrice = ticketOptions.length
+    ? Math.min(...ticketOptions.map((ticket) => Number(ticket?.price) || 0))
     : null;
 
   const fmtDate = d => { if(!d) return ''; const [y,m,day]=d.split('-'); return new Date(y,m-1,day).toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric',year:'numeric'}); };
@@ -76,14 +78,27 @@ export default function EventCard({ event, onEdit, onDelete, onGeneratePost }) {
               <span><strong style={{color:'#374151'}}>Time:</strong> {fmtTime(event.time)}</span>
               <span><strong style={{color:'#374151'}}>Venue:</strong> {venue}</span>
               <span><strong style={{color:'#374151'}}>Max:</strong> {maxParticipants}</span>
-              {generalTicket&&(
+              {minPrice !== null &&(
                 <span>
-                  <strong style={{color:'#374151'}}>General Ticket:</strong>{' '}
-                  {Number(generalTicket.price||0) === 0 ? 'Free' : `Rs. ${Number(generalTicket.price||0).toLocaleString()}`}
+                  <strong style={{color:'#374151'}}>Ticket Price:</strong>{' '}
+                  {minPrice === 0 ? 'Free' : `From ${formatTicketPrice(minPrice)}`}
                 </span>
               )}
               {event.views>0&&<span><strong style={{color:'#374151'}}>Views:</strong> {event.views}</span>}
             </div>
+
+            {ticketOptions.length > 0 && (
+              <div style={{display:'flex',gap:'6px',flexWrap:'wrap',marginBottom:'10px'}}>
+                {ticketOptions.map((ticket, index) => (
+                  <span
+                    key={`${ticket.type}-${index}`}
+                    style={{background:'#eef2ff',color:'#3730a3',padding:'4px 10px',borderRadius:'20px',fontSize:'11px',fontWeight:700}}
+                  >
+                    {formatTicketLabel(ticket, index)} • {formatTicketPrice(ticket.price)} • {ticket.totalSeats} seats
+                  </span>
+                ))}
+              </div>
+            )}
 
             {event.tags&&event.tags.length>0&&(
               <div style={{display:'flex',gap:'6px',flexWrap:'wrap',marginBottom:'10px'}}>

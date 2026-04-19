@@ -2,19 +2,24 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const mongoose = require("mongoose");
 const { verifyEventToken, createEvent } = require("../controllers/eventController");
 const Event = require("../models/Event");
 const Notification = require("../models/Notification");
 const Reminder = require("../models/Reminder");
 const Society = require("../models/society");
 const SocietyRequest = require("../models/societyRequest");
+const Ticket = require("../../Model/Ticket");
+const {
+  buildDefaultTickets,
+  inferIsFreeEventFromTickets,
+  normalizeTicketEntry,
+  parseTicketsInput,
+  validateUniqueTicketTypes,
+} = require("../utils/ticketing");
 
 const router = express.Router();
 const PUBLIC_STATUSES = new Set(["approved", "published", "upcoming", "active"]);
-const DEFAULT_GENERAL_TICKET_PRICE = Math.max(
-  1,
-  Number(process.env.DEFAULT_GENERAL_TICKET_PRICE) || 500
-);
 
 const uploadsDir = path.join(__dirname, "..", "..", "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -98,69 +103,6 @@ const toBoolean = (value) => {
 const hasOwn = (value, key) =>
   Boolean(value && Object.prototype.hasOwnProperty.call(value, key));
 
-const isLegacyGeneralFallbackTicket = (ticket, type, rawPrice) => {
-  const description = String(ticket?.description || "").trim().toLowerCase();
-  return (
-    type === "general" &&
-    rawPrice === 0 &&
-    (!description || description === "general admission")
-  );
-};
-
-const inferIsFreeEventFromTickets = (tickets, fallback = false) => {
-  if (!Array.isArray(tickets) || tickets.length === 0) {
-    return fallback;
-  }
-
-  return tickets.every((ticket) => Math.max(0, Number(ticket?.price) || 0) === 0);
-};
-
-const buildDefaultTickets = (seatCount = 100, isFreeEvent = false) => [
-  {
-    type: "general",
-    price: isFreeEvent ? 0 : DEFAULT_GENERAL_TICKET_PRICE,
-    totalSeats: seatCount,
-    description: isFreeEvent ? "Free admission" : "General admission",
-  },
-];
-
-const normalizeTicketEntry = (
-  ticket,
-  fallbackSeats = 100,
-  { isFreeEvent = false, allowLegacyPaidFallback = false } = {}
-) => {
-  const type = String(ticket?.type || "general").trim().toLowerCase() || "general";
-  const rawPrice = Number(ticket?.price);
-  const totalSeats = Number(ticket?.totalSeats);
-  return {
-    type,
-    price: isFreeEvent
-      ? 0
-      : allowLegacyPaidFallback && isLegacyGeneralFallbackTicket(ticket, type, rawPrice)
-        ? DEFAULT_GENERAL_TICKET_PRICE
-        : Math.max(0, Number.isFinite(rawPrice) ? rawPrice : 0),
-    totalSeats:
-      Number.isFinite(totalSeats) && totalSeats > 0 ? totalSeats : Math.max(1, fallbackSeats),
-    description: String(ticket?.description || "").trim(),
-  };
-};
-
-const parseTicketsInput = (tickets, fallbackSeats = 100, options = {}) => {
-  if (!tickets) return [];
-
-  let parsedTickets = tickets;
-  if (typeof tickets === "string") {
-    try {
-      parsedTickets = JSON.parse(tickets);
-    } catch {
-      return [];
-    }
-  }
-
-  if (!Array.isArray(parsedTickets)) return [];
-  return parsedTickets.map((ticket) => normalizeTicketEntry(ticket, fallbackSeats, options));
-};
-
 const isPopulatedDoc = (value) =>
   Boolean(value && typeof value === "object" && !Array.isArray(value) && value._id);
 
@@ -188,10 +130,11 @@ const normalizeEventRecord = (event) => {
     : inferIsFreeEventFromTickets(event?.tickets, false);
   const tickets =
     Array.isArray(event?.tickets) && event.tickets.length > 0
-      ? event.tickets.map((ticket) =>
+      ? event.tickets.map((ticket, index) =>
           normalizeTicketEntry(ticket, fallbackSeats, {
             isFreeEvent: inferredIsFreeEvent,
             allowLegacyPaidFallback: !inferredIsFreeEvent && !hasExplicitFreeFlag,
+            index,
           })
         )
       : buildDefaultTickets(fallbackSeats, inferredIsFreeEvent);
@@ -243,6 +186,60 @@ const normalizeEventRecord = (event) => {
   };
 };
 
+const attachTicketAvailability = async (events) => {
+  if (!Array.isArray(events) || events.length === 0) {
+    return events;
+  }
+
+  const eventIds = events
+    .map((event) => event?._id)
+    .filter(Boolean)
+    .map((eventId) => new mongoose.Types.ObjectId(String(eventId)));
+
+  if (eventIds.length === 0) {
+    return events;
+  }
+
+  const reservedCounts = await Ticket.aggregate([
+    {
+      $match: {
+        eventId: { $in: eventIds },
+        status: { $in: ["pending", "confirmed", "used"] },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          eventId: "$eventId",
+          ticketType: "$ticketType",
+        },
+        quantity: { $sum: "$quantity" },
+      },
+    },
+  ]);
+
+  const availabilityMap = new Map(
+    reservedCounts.map((entry) => [
+      `${String(entry._id.eventId)}:${String(entry._id.ticketType)}`,
+      Number(entry.quantity) || 0,
+    ])
+  );
+
+  return events.map((event) => ({
+    ...event,
+    tickets: (event.tickets || []).map((ticket) => {
+      const bookedTicketSeats =
+        availabilityMap.get(`${String(event._id)}:${String(ticket.type)}`) || 0;
+
+      return {
+        ...ticket,
+        bookedSeats: bookedTicketSeats,
+        availableSeats: Math.max(Number(ticket.totalSeats || 0) - bookedTicketSeats, 0),
+      };
+    }),
+  }));
+};
+
 const isPublicEvent = (event) => {
   const normalized = normalizeEventRecord(event);
   return normalized.isPublished || PUBLIC_STATUSES.has(normalized.status);
@@ -265,7 +262,12 @@ const getNormalizedEventById = async (id) => {
     .populate("societyRequestId", "societyName officialEmail")
     .lean();
 
-  return event ? normalizeEventRecord(event) : null;
+  if (!event) {
+    return null;
+  }
+
+  const [normalized] = await attachTicketAvailability([normalizeEventRecord(event)]);
+  return normalized || null;
 };
 
 const buildSocietyEventQuery = async (email, organizerName) => {
@@ -303,10 +305,11 @@ const normalizeEventPayload = (data, image = null) => {
     : inferIsFreeEventFromTickets(parsedTickets, false);
   const normalizedTickets =
     parsedTickets.length > 0
-      ? parsedTickets.map((ticket) =>
+      ? parsedTickets.map((ticket, index) =>
           normalizeTicketEntry(ticket, safeMaxParticipants, {
             isFreeEvent,
             allowLegacyPaidFallback: !isFreeEvent && !hasExplicitFreeFlag,
+            index,
           })
         )
       : buildDefaultTickets(safeMaxParticipants, isFreeEvent);
@@ -390,16 +393,27 @@ const validate = async (data, excludeId = null) => {
   } else {
     const totalSeats = tickets.reduce((sum, ticket) => sum + Number(ticket?.totalSeats || 0), 0);
 
-    tickets.forEach((ticket) => {
+    if (!validateUniqueTicketTypes(tickets)) {
+      errors.push("Each ticket option must use a unique ticket type.");
+    }
+
+    tickets.forEach((ticket, index) => {
       const totalTicketSeats = Number(ticket?.totalSeats);
       const ticketPrice = Number(ticket?.price);
       const ticketNote = normalizeText(ticket?.description);
+      const ticketLabel = normalizeText(ticket?.label || "");
 
       if (!Number.isInteger(totalTicketSeats) || totalTicketSeats < 1 || totalTicketSeats > 10000) {
         errors.push("Each ticket type must have between 1 and 10000 seats.");
       }
       if (!Number.isFinite(ticketPrice) || ticketPrice < 0) {
         errors.push("Ticket price must be 0 or more.");
+      }
+      if (!ticketLabel || ticketLabel.length < 2) {
+        errors.push(`Ticket label ${index + 1} must be at least 2 characters.`);
+      }
+      if (ticketLabel.length > 60) {
+        errors.push(`Ticket label ${index + 1} cannot exceed 60 characters.`);
       }
       if (ticketNote.length > 120) {
         errors.push("Ticket note cannot exceed 120 characters.");
@@ -494,8 +508,11 @@ router.get("/public", async (req, res) => {
     const normalizedSearch = String(search || "").trim().toLowerCase();
     const normalizedCategory = String(category || "").trim().toLowerCase();
 
-    const events = (await Event.find().sort({ date: 1 }).lean())
-      .map(normalizeEventRecord)
+    const normalizedEvents = await attachTicketAvailability(
+      (await Event.find().sort({ date: 1 }).lean()).map(normalizeEventRecord)
+    );
+
+    const events = normalizedEvents
       .filter((event) => isPublicEvent(event) && isUpcomingEvent(event))
       .filter((event) =>
         normalizedCategory ? String(event.category).trim().toLowerCase() === normalizedCategory : true

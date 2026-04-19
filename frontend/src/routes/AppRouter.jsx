@@ -31,6 +31,7 @@ const AdminDashboard = lazy(() => import("../pages/Admin/Dashboard"));
 const AdminEvents = lazy(() => import("../pages/Admin/Events"));
 const AdminFeedbacks = lazy(() => import("../pages/Admin/Feedbacks"));
 const AdminInquiries = lazy(() => import("../pages/Admin/Inquiries"));
+const CommonSettings = lazy(() => import("../pages/Admin/CommonSettings"));
 
 const LoadingWrapper = styled.div`
   min-height: 100vh;
@@ -248,6 +249,14 @@ export default function AppRouter() {
           element={
             <ProtectedRoute allowedRole="admin">
               <AdminPaymentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <CommonSettings />
             </ProtectedRoute>
           }
         />

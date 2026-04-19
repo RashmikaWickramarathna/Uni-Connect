@@ -1,6 +1,7 @@
 import React from "react";
 
 import { getImageUrl } from "../../api/adminEventsApi";
+import { formatTicketLabel, formatTicketPrice } from "../../utils/ticketUtils";
 
 const CATEGORY_COLORS = {
   Academic: "#2563eb",
@@ -39,8 +40,9 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
   const venue = event.venue || "TBA";
   const category = event.category || "Other";
   const maxParticipants = event.maxParticipants || 100;
-  const generalTicket = Array.isArray(event.tickets)
-    ? event.tickets.find((ticket) => String(ticket?.type).toLowerCase() === "general")
+  const ticketOptions = Array.isArray(event.tickets) ? event.tickets : [];
+  const minPrice = ticketOptions.length
+    ? Math.min(...ticketOptions.map((ticket) => Number(ticket?.price) || 0))
     : null;
   const title = event.title || "Untitled Event";
   const description = event.description || "No description provided.";
@@ -193,16 +195,41 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
               <span><strong style={{ color: "#374151" }}>Time:</strong> {formatTime(event.time)}</span>
               <span><strong style={{ color: "#374151" }}>Venue:</strong> {venue}</span>
               <span><strong style={{ color: "#374151" }}>Max:</strong> {maxParticipants}</span>
-              {generalTicket ? (
+              {minPrice !== null ? (
                 <span>
-                  <strong style={{ color: "#374151" }}>General Ticket:</strong>{" "}
-                  {Number(generalTicket.price || 0) === 0
-                    ? "Free"
-                    : `Rs. ${Number(generalTicket.price || 0).toLocaleString()}`}
+                  <strong style={{ color: "#374151" }}>Ticket Price:</strong>{" "}
+                  {minPrice === 0 ? "Free" : `From ${formatTicketPrice(minPrice)}`}
                 </span>
               ) : null}
               {event.views > 0 ? <span><strong style={{ color: "#374151" }}>Views:</strong> {event.views}</span> : null}
             </div>
+
+            {ticketOptions.length > 0 ? (
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  flexWrap: "wrap",
+                  marginBottom: "10px",
+                }}
+              >
+                {ticketOptions.map((ticket, index) => (
+                  <span
+                    key={`${ticket.type}-${index}`}
+                    style={{
+                      background: "#eef2ff",
+                      color: "#3730a3",
+                      padding: "4px 10px",
+                      borderRadius: "999px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {formatTicketLabel(ticket, index)} • {formatTicketPrice(ticket.price)} • {ticket.totalSeats} seats
+                  </span>
+                ))}
+              </div>
+            ) : null}
 
             <div
               style={{

@@ -533,3 +533,58 @@
   .ab-filter-row { width: 100%; }
   .ab-select { flex: 1; }
 }
+
+html[data-theme="dark"] .ab-page,
+html[data-theme="dark"] .ab-title,
+html[data-theme="dark"] .ab-search,
+html[data-theme="dark"] .ab-type,
+html[data-theme="dark"] .ab-event-title,
+html[data-theme="dark"] .ab-student-name,
+html[data-theme="dark"] .ab-ticket-num,
+html[data-theme="dark"] .ab-modal-title,
+html[data-theme="dark"] .ab-modal-sub,
+html[data-theme="dark"] .ab-modal-label,
+html[data-theme="dark"] .ab-modal-textarea {
+  color: var(--app-text);
+}
+
+html[data-theme="dark"] .ab-sub,
+html[data-theme="dark"] .ab-stat-label,
+html[data-theme="dark"] .ab-count,
+html[data-theme="dark"] .ab-student-id,
+html[data-theme="dark"] .ab-time,
+html[data-theme="dark"] .ab-qty,
+html[data-theme="dark"] .ab-no-action {
+  color: var(--app-text-muted);
+}
+
+html[data-theme="dark"] .ab-stat-card,
+html[data-theme="dark"] .ab-search-wrap,
+html[data-theme="dark"] .ab-select,
+html[data-theme="dark"] .ab-table-wrap,
+html[data-theme="dark"] .ab-empty,
+html[data-theme="dark"] .ab-loading,
+html[data-theme="dark"] .ab-modal,
+html[data-theme="dark"] .ab-modal-textarea {
+  background: var(--app-surface);
+  border-color: var(--app-border);
+  box-shadow: var(--shadow-md);
+}
+
+html[data-theme="dark"] .ab-auto-notice {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(96, 165, 250, 0.24);
+  color: #bfdbfe;
+}
+
+html[data-theme="dark"] .ab-table thead th {
+  background: #0f1d33;
+}
+
+html[data-theme="dark"] .ab-table tbody tr {
+  background: var(--app-surface);
+}
+
+html[data-theme="dark"] .ab-table tbody tr:hover {
+  background: rgba(96, 165, 250, 0.06);
+}
