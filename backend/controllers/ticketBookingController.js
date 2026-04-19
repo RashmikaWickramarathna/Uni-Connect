@@ -18,6 +18,7 @@ const {
   inferIsFreeEventFromTickets,
   normalizeTicketEntry,
 } = require("../src/utils/ticketing");
+const { sendBookingEmail } = require("../utils/sendBookingEmail");
 
 const BOOKABLE_STATUSES = new Set(["approved", "published", "upcoming", "active"]);
 
@@ -51,6 +52,25 @@ const normalizePaymentMethod = (value, isFree) => {
 
   const normalized = String(value || "cash").trim().toLowerCase();
   return ["cash", "bank_transfer", "online"].includes(normalized) ? normalized : "cash";
+};
+
+const sendConfirmedTicketEmail = async (ticket, source) => {
+  const normalizedStatus = String(ticket?.status || "").toLowerCase();
+  if (!["confirmed", "used"].includes(normalizedStatus)) {
+    return { attempted: false, sent: false, skipped: true, reason: "ticket_not_confirmed" };
+  }
+
+  try {
+    const result = await sendBookingEmail(ticket);
+    if (result?.skipped) {
+      return { attempted: false, sent: false, skipped: true, reason: result.reason };
+    }
+
+    return { attempted: true, sent: true };
+  } catch (error) {
+    console.error(`Ticket email failed after ${source}:`, error.message);
+    return { attempted: true, sent: false, error: error.message };
+  }
 };
 
 const createTicketPaymentIntent = async (req, res) => {
@@ -297,12 +317,15 @@ const bookTicket = async (req, res) => {
       $inc: { bookedSeats: quantity },
     });
 
+    const emailNotification = await sendConfirmedTicketEmail(ticket, "booking");
+
     return res.status(201).json({
       message: "Ticket booked successfully.",
       ticket,
       ticketNumber: ticket.ticketNumber,
       payment,
       receiptNumber: payment?.receiptNumber || null,
+      emailNotification,
     });
   } catch (error) {
     console.error("Book Ticket Error:", error);

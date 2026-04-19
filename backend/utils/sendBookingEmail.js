@@ -1,116 +1,390 @@
-const nodemailer = require('nodemailer');
+const nodemailer = require("nodemailer");
 
-// Create transporter
+const { getMainFrontendUrl } = require("../src/utils/frontendLinks");
+const { humanizeTicketType } = require("../src/utils/ticketing");
+
+let QRCode = null;
+
+try {
+  QRCode = require("qrcode");
+} catch (error) {
+  console.warn(
+    'Ticket email QR generation is unavailable because the "qrcode" package could not be loaded.'
+  );
+}
+
+const isEmailConfigured = () =>
+  Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+
 const createTransporter = () => {
+  const emailHost = String(process.env.EMAIL_HOST || "").trim();
+  const emailService = String(process.env.EMAIL_SERVICE || "").trim();
+  const port = Number(process.env.EMAIL_PORT) || (emailHost ? 587 : undefined);
+
+  if (emailHost) {
+    return nodemailer.createTransport({
+      host: emailHost,
+      port,
+      secure: process.env.EMAIL_SECURE === "true" || port === 465,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+  }
+
   return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp-mail.outlook.com',
-    port: process.env.EMAIL_PORT || 587,
-    secure: false, // true for 465, false for other ports
+    service: emailService || "gmail",
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    tls: {
+      rejectUnauthorized: false,
+    },
   });
 };
 
-// Send booking confirmation
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const formatDateTime = (value) => {
+  if (!value) return "To be announced";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "To be announced";
+  }
+
+  return new Intl.DateTimeFormat("en-LK", {
+    dateStyle: "full",
+    timeStyle: "short",
+  }).format(date);
+};
+
+const formatCurrency = (value) => {
+  const amount = Number(value) || 0;
+  if (amount === 0) return "Free";
+
+  return new Intl.NumberFormat("en-LK", {
+    style: "currency",
+    currency: "LKR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
+
+const formatPaymentMethod = (value) => {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "Not specified";
+
+  return normalized
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+};
+
+const formatStatus = (value) => {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "Unknown";
+
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1).replace(/_/g, " ");
+};
+
+const buildDetailsHtml = (rows) =>
+  rows
+    .map(
+      ([label, value]) => `
+        <div class="detail-row">
+          <div class="detail-label">${escapeHtml(label)}</div>
+          <div class="detail-value">${escapeHtml(value)}</div>
+        </div>
+      `
+    )
+    .join("");
+
+const buildDetailsText = (rows) =>
+  rows.map(([label, value]) => `${label}: ${value}`).join("\n");
+
+const buildQrAttachment = async (ticket) => {
+  if (!QRCode) {
+    throw new Error('The "qrcode" package is required to generate ticket QR emails.');
+  }
+
+  const qrBuffer = await QRCode.toBuffer(String(ticket.ticketNumber || ""), {
+    type: "png",
+    width: 300,
+    margin: 2,
+    color: {
+      dark: "#0f172a",
+      light: "#ffffff",
+    },
+  });
+
+  return {
+    filename: `${String(ticket.ticketNumber || "ticket").replace(/[^a-z0-9_-]/gi, "_")}.png`,
+    content: qrBuffer,
+    contentType: "image/png",
+    cid: "booking-ticket-qr",
+  };
+};
+
 const sendBookingEmail = async (ticket) => {
-  // Check if credentials exist
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.log('⚠️ Email disabled - missing EMAIL_USER/EMAIL_PASS in .env');
-    return false;
+  if (!isEmailConfigured()) {
+    console.log("Ticket email skipped: EMAIL_USER/EMAIL_PASS are not configured.");
+    return { skipped: true, reason: "email_not_configured" };
+  }
+
+  if (!ticket?.email || !ticket?.ticketNumber) {
+    throw new Error("Ticket email requires both recipient email and ticket number.");
   }
 
   const transporter = createTransporter();
-  
-  // Inline QR code base64 (generate server-side or use ticket number)
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${ticket.ticketNumber}`;
-  
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: ticket.email,
-    subject: `🎫 UniConnect Ticket Confirmation - ${ticket.ticketNumber}`,
-    html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { text-align: center; background: linear-gradient(135deg, #4361ee, #3b82f6); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
-    .ticket-section { background: #f8fafc; padding: 25px; border-radius: 12px; margin: 20px 0; border-left: 5px solid #22c55e; }
-    .ticket-number { font-size: 24px; font-weight: bold; color: #1e293b; letter-spacing: 2px; text-align: center; margin: 20px 0; }
-    .qr-code { text-align: center; margin: 20px 0; }
-    .qr-code img { max-width: 200px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-    .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
-    .detail { background: white; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
-    .detail-label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-    .detail-value { font-weight: 600; font-size: 16px; color: #1e293b; margin-top: 5px; }
-    .status { padding: 10px 20px; border-radius: 25px; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
-    .status.confirmed { background: #dcfce7; color: #16a34a; }
-    .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 14px; }
-    @media (max-width: 600px) { .details-grid { grid-template-columns: 1fr; } }
-  </style>
-</head>
-<body>
-  <div className="header">
-    <h1>🎫 Ticket Confirmed!</h1>
-    <p>Your booking for <strong>${ticket.eventTitle}</strong> is confirmed</p>
-  </div>
-  
-  <div className="ticket-section">
-    <div className="ticket-number">${ticket.ticketNumber}</div>
-    <div className="qr-code">
-      <img src="${qrCodeUrl}" alt="QR Code" />
-      <p style="color: #64748b; font-size: 14px; margin-top: 10px;">Show this QR at event entrance</p>
-    </div>
-  </div>
-  
-  <div className="ticket-section">
-    <h3 style="margin-bottom: 20px; color: #1e293b;">Event Details</h3>
-    <div className="details-grid">
-      <div className="detail">
-        <div className="detail-label">Date & Time</div>
-        <div className="detail-value">${new Date(ticket.eventDate).toLocaleString('en-LK', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-      </div>
-      <div className="detail">
-        <div className="detail-label">Venue</div>
-        <div className="detail-value">${ticket.venue}</div>
-      </div>
-      <div className="detail">
-        <div className="detail-label">Ticket Type</div>
-        <div className="detail-value">${ticket.ticketType.replace('_', ' ')} × ${ticket.quantity}</div>
-      </div>
-      <div className="detail">
-        <div className="detail-label">Total</div>
-        <div className="detail-value">${ticket.totalAmount === 0 ? 'FREE' : 'Rs. ' + ticket.totalAmount.toLocaleString()}</div>
-      </div>
-    </div>
-  </div>
-  
-  <div className="ticket-section">
-    <h3 style="margin-bottom: 15px; color: #1e293b;">Status</h3>
-    <span className="status confirmed">✅ Confirmed</span>
-  </div>
-  
-  <div className="footer">
-    <p>Bring your ticket number or QR code to the event. Questions? Contact event organizer.</p>
-    <p><strong>UniConnect</strong> | University Event Ticketing</p>
-  </div>
-</body>
-</html>
-    `,
-  };
+  const ticketName =
+    String(ticket.ticketLabel || "").trim() ||
+    humanizeTicketType(ticket.ticketType || "general");
+  const ticketCount = Math.max(1, Number(ticket.quantity) || 1);
+  const myTicketsUrl = `${getMainFrontendUrl()}/my-tickets`;
+  const qrAttachment = await buildQrAttachment(ticket);
 
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Booking email sent:', info.messageId);
-    return true;
-  } catch (error) {
-    console.error('❌ Email send failed:', error);
-    return false;
-  }
+  const attendeeRows = [
+    ["Booked By", ticket.studentName || "Not provided"],
+    ["Student ID", ticket.studentId || "Not provided"],
+    ["Email", ticket.email || "Not provided"],
+    ["Phone", ticket.phone || "Not provided"],
+    ["Faculty", ticket.faculty || "Not provided"],
+  ];
+
+  const bookingRows = [
+    ["Ticket Number", ticket.ticketNumber || "Not available"],
+    ["Ticket Type", ticketName],
+    ["Ticket Count", String(ticketCount)],
+    ["Price Per Ticket", formatCurrency(ticket.unitPrice)],
+    ["Total Cost", formatCurrency(ticket.totalAmount)],
+    ["Booking Status", formatStatus(ticket.status)],
+    ["Payment Status", formatStatus(ticket.paymentStatus)],
+    ["Payment Method", formatPaymentMethod(ticket.paymentMethod)],
+  ];
+
+  const eventRows = [
+    ["Event", ticket.eventTitle || "Event"],
+    ["Date & Time", formatDateTime(ticket.eventDate)],
+    ["Venue", ticket.venue || "To be announced"],
+    ["Booked At", formatDateTime(ticket.bookedAt || ticket.createdAt)],
+  ];
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Uni-Connect Ticket Confirmation</title>
+        <style>
+          body {
+            margin: 0;
+            padding: 0;
+            background: #f3f6fb;
+            font-family: Arial, sans-serif;
+            color: #0f172a;
+          }
+          .wrapper {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 24px 16px 40px;
+          }
+          .hero {
+            background: linear-gradient(135deg, #0f766e, #0f172a);
+            color: #ffffff;
+            border-radius: 20px;
+            padding: 28px 24px;
+          }
+          .hero h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+          }
+          .hero p {
+            margin: 0;
+            font-size: 15px;
+            line-height: 1.6;
+          }
+          .card {
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 24px;
+            margin-top: 18px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+          }
+          .section-title {
+            margin: 0 0 16px;
+            font-size: 18px;
+            color: #0f172a;
+          }
+          .ticket-number {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: #ecfeff;
+            color: #155e75;
+            border-radius: 999px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+          }
+          .qr-wrap {
+            text-align: center;
+            padding: 8px 0 0;
+          }
+          .qr-wrap img {
+            width: 220px;
+            max-width: 100%;
+            border-radius: 18px;
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+            background: #ffffff;
+          }
+          .qr-note {
+            margin: 14px 0 0;
+            color: #475569;
+            font-size: 14px;
+            line-height: 1.6;
+          }
+          .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+          }
+          .detail-row {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 14px;
+          }
+          .detail-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            margin-bottom: 6px;
+          }
+          .detail-value {
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.5;
+            color: #0f172a;
+            word-break: break-word;
+          }
+          .cta {
+            display: inline-block;
+            margin-top: 18px;
+            background: #0f766e;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-weight: 700;
+          }
+          .footer {
+            margin-top: 18px;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.7;
+            text-align: center;
+          }
+          @media (max-width: 640px) {
+            .detail-grid {
+              grid-template-columns: 1fr;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="wrapper">
+          <div class="hero">
+            <h1>Your ticket is ready</h1>
+            <p>
+              Your booking for <strong>${escapeHtml(ticket.eventTitle || "your event")}</strong> has been recorded successfully.
+              Keep this email and show the QR code at the entrance.
+            </p>
+            <div class="ticket-number">${escapeHtml(ticket.ticketNumber)}</div>
+          </div>
+
+          <div class="card">
+            <h2 class="section-title">Booking QR</h2>
+            <div class="qr-wrap">
+              <img src="cid:${qrAttachment.cid}" alt="Ticket QR code" />
+              <p class="qr-note">
+                This booking QR covers <strong>${escapeHtml(String(ticketCount))}</strong>
+                ticket${ticketCount > 1 ? "s" : ""}. You can also find it again from My Tickets.
+              </p>
+            </div>
+            <a class="cta" href="${escapeHtml(myTicketsUrl)}">Open My Tickets</a>
+          </div>
+
+          <div class="card">
+            <h2 class="section-title">Booked User Details</h2>
+            <div class="detail-grid">
+              ${buildDetailsHtml(attendeeRows)}
+            </div>
+          </div>
+
+          <div class="card">
+            <h2 class="section-title">Ticket Summary</h2>
+            <div class="detail-grid">
+              ${buildDetailsHtml(bookingRows)}
+            </div>
+          </div>
+
+          <div class="card">
+            <h2 class="section-title">Event Details</h2>
+            <div class="detail-grid">
+              ${buildDetailsHtml(eventRows)}
+            </div>
+          </div>
+
+          <div class="footer">
+            Uni-Connect Ticketing<br />
+            If you cannot see the QR image above, the same QR is attached to this email as a PNG file.
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const text = [
+    `Your ticket for ${ticket.eventTitle || "your event"} is ready.`,
+    "",
+    "Booked User Details",
+    buildDetailsText(attendeeRows),
+    "",
+    "Ticket Summary",
+    buildDetailsText(bookingRows),
+    "",
+    "Event Details",
+    buildDetailsText(eventRows),
+    "",
+    `My Tickets: ${myTicketsUrl}`,
+  ].join("\n");
+
+  const info = await transporter.sendMail({
+    from: `"UNI-CONNECT" <${process.env.EMAIL_USER}>`,
+    to: String(ticket.email).trim().toLowerCase(),
+    subject: `Your Uni-Connect ticket for ${ticket.eventTitle || "your event"}`,
+    html,
+    text,
+    attachments: [qrAttachment],
+  });
+
+  console.log(`Ticket email sent to ${ticket.email}: ${info.messageId}`);
+  return info;
 };
 
-module.exports = { sendBookingEmail };
-
+module.exports = { sendBookingEmail, isEmailConfigured };

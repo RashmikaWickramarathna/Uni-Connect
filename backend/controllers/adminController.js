@@ -4,6 +4,21 @@
 const Ticket  = require("../Model/Ticket");
 const Payment = require("../Model/Payment");
 const Event   = require("../Model/Event");
+const { sendBookingEmail } = require("../utils/sendBookingEmail");
+
+const sendConfirmedTicketEmail = async (ticket, source) => {
+  try {
+    const result = await sendBookingEmail(ticket);
+    if (result?.skipped) {
+      return { attempted: false, sent: false, skipped: true, reason: result.reason };
+    }
+
+    return { attempted: true, sent: true };
+  } catch (error) {
+    console.error(`Ticket email failed after ${source}:`, error.message);
+    return { attempted: true, sent: false, error: error.message };
+  }
+};
 
 // ─────────────────────────────────────────────
 // 📋  Get All Bookings
@@ -56,7 +71,9 @@ const approveBooking = async (req, res) => {
       });
     }
 
-    res.json({ message: "Ticket approved successfully", ticket });
+    const emailNotification = await sendConfirmedTicketEmail(ticket, "admin approval");
+
+    res.json({ message: "Ticket approved successfully", ticket, emailNotification });
   } catch (err) {
     console.error("❌ Approve Booking Error:", err);
     res.status(500).json({ error: err.message });
