@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { FiMonitor, FiMoon, FiSun } from 'react-icons/fi';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { normalizeAuthRole, useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -11,6 +13,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { theme, resolvedTheme, toggleTheme } = useTheme();
   const authMenuRef = useRef(null);
   const userRole = normalizeAuthRole(user?.role);
   const isLoggedIn = Boolean(user);
@@ -18,6 +21,15 @@ const Navbar = () => {
   const userLabel = user?.name || user?.email?.split('@')[0] || (userRole === 'admin' ? 'Admin' : 'Student');
   const isStudentArea =
     userRole === 'student' && ['/', '/home', '/my-feedbacks', '/my-inquiries', '/profile'].includes(location.pathname);
+  const ThemeIcon = theme === 'system' ? FiMonitor : resolvedTheme === 'dark' ? FiSun : FiMoon;
+  const themeButtonText =
+    theme === 'system' ? 'System' : resolvedTheme === 'dark' ? 'Light' : 'Dark';
+  const themeButtonLabel =
+    theme === 'system'
+      ? 'Theme is following your system preference'
+      : resolvedTheme === 'dark'
+        ? 'Switch to light mode'
+        : 'Switch to dark mode';
 
   const closeMenus = () => {
     setIsAuthMenuOpen(false);
@@ -148,6 +160,16 @@ const Navbar = () => {
             </li>
           )}
           <li className="auth-buttons">
+            <button
+              className="btn-theme-toggle"
+              type="button"
+              onClick={toggleTheme}
+              aria-label={themeButtonLabel}
+              title={themeButtonLabel}
+            >
+              <ThemeIcon />
+              <span>{themeButtonText}</span>
+            </button>
             {isLoggedIn ? (
               <>
                 <span className="auth-user-pill">

@@ -1,10 +1,10 @@
 :root {
-  --panel-bg: #f4f7fb;
-  --panel-bg-soft: #edf5ff;
-  --panel-card: #ffffff;
-  --panel-border: #e2ebf5;
-  --panel-text: #132a4a;
-  --panel-muted: #60748d;
+  --panel-bg: var(--app-bg);
+  --panel-bg-soft: var(--app-surface-muted);
+  --panel-card: var(--app-surface-elevated);
+  --panel-border: var(--app-border);
+  --panel-text: var(--app-text);
+  --panel-muted: var(--app-text-muted);
   --panel-sidebar-start: #102b41;
   --panel-sidebar-end: #133a5a;
   --panel-accent: #2563eb;
@@ -12,8 +12,14 @@
   --panel-success: #10b981;
   --panel-warning: #f59e0b;
   --panel-danger: #ef4444;
-  --panel-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  --panel-shadow: var(--shadow-lg);
   --panel-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+html[data-theme="dark"] {
+  --panel-sidebar-start: #081321;
+  --panel-sidebar-end: #0d1d30;
+  --panel-accent-soft: rgba(96, 165, 250, 0.18);
 }
 
 .society-dashboard-page,
@@ -25,9 +31,15 @@
   min-height: 100vh;
   background:
     radial-gradient(circle at top left, rgba(14, 165, 233, 0.09), transparent 28%),
-    linear-gradient(180deg, #eff6ff 0%, #f9fbff 100%);
+    linear-gradient(180deg, var(--panel-bg-soft) 0%, var(--panel-bg) 100%);
   color: var(--panel-text);
   font-family: var(--panel-font);
+}
+
+html[data-theme="dark"] .society-dashboard-page {
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 26%),
+    linear-gradient(180deg, #08111f 0%, #0e1728 100%);
 }
 
 .society-dashboard-page button,
@@ -252,7 +264,7 @@
   gap: 1rem;
   padding: 1.55rem 2rem;
   border-bottom: 1px solid var(--panel-border);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--panel-card);
   backdrop-filter: blur(12px);
 }
 
@@ -296,7 +308,7 @@
   padding: 0.75rem 1rem;
   border: 1px solid rgba(239, 68, 68, 0.18);
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--panel-card);
   color: #b91c1c;
   font-weight: 700;
   cursor: pointer;
@@ -315,8 +327,29 @@
   gap: 0.85rem;
   padding: 0.5rem 0.7rem;
   border-radius: 18px;
-  background: #ffffff;
+  background: var(--panel-card);
   border: 1px solid var(--panel-border);
+}
+
+.panel-theme-button {
+  min-height: 46px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--panel-card);
+  color: var(--panel-text);
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.panel-theme-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, 0.28);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.12);
 }
 
 .panel-avatar {
@@ -450,7 +483,7 @@
 
 .panel-stat-card.is-active {
   border-color: rgba(37, 99, 235, 0.24);
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  background: linear-gradient(180deg, var(--panel-card) 0%, var(--panel-bg-soft) 100%);
 }
 
 .panel-stat-card-header {
@@ -513,7 +546,7 @@
   padding: 0.95rem 1rem;
   border: 1px solid var(--panel-border);
   border-radius: 16px;
-  background: #ffffff;
+  background: var(--panel-card);
   color: var(--panel-text);
   outline: none;
 }
@@ -534,7 +567,7 @@
   padding: 0.7rem 1rem;
   border-radius: 14px;
   border: 1px solid var(--panel-border);
-  background: #ffffff;
+  background: var(--panel-card);
   color: var(--panel-muted);
   font-weight: 700;
   cursor: pointer;
@@ -570,6 +603,18 @@
   background: #fff1f2;
   border: 1px solid #fecdd3;
   color: #be123c;
+}
+
+html[data-theme="dark"] .panel-banner.warning {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.28);
+  color: #fcd34d;
+}
+
+html[data-theme="dark"] .panel-banner.danger {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.28);
+  color: #fda4af;
 }
 
 .panel-empty,
@@ -623,6 +668,24 @@
   background: #fef2f2;
   border-color: #fca5a5;
   color: #b91c1c;
+}
+
+html[data-theme="dark"] .panel-toast.success {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #86efac;
+}
+
+html[data-theme="dark"] .panel-toast.warning {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+
+html[data-theme="dark"] .panel-toast.error {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fda4af;
 }
 
 @keyframes panel-toast-in {

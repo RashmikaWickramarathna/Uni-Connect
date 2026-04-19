@@ -10,6 +10,13 @@ const typeConfig = {
 };
 
 export default function NotificationBanner({ userEmail }) {
+  const theme = {
+    surface: 'var(--app-surface-elevated)',
+    border: 'var(--app-border)',
+    text: 'var(--app-text)',
+    muted: 'var(--app-text-muted)',
+    primary: 'var(--app-primary)',
+  };
   const [notifications, setNotifications] = useState([]);
   const [banner, setBanner] = useState(null);
   const [showList, setShowList] = useState(false);
@@ -34,9 +41,11 @@ export default function NotificationBanner({ userEmail }) {
     const newestUnread = notifications.find(notification => !notification.isRead);
     if (newestUnread && (!banner || banner._id !== newestUnread._id)) {
       setBanner(newestUnread);
-      setTimeout(() => setBanner(null), 6000);
+      const timeoutId = window.setTimeout(() => setBanner(null), 6000);
+      return () => window.clearTimeout(timeoutId);
     }
-  }, [notifications]);
+    return undefined;
+  }, [banner, notifications]);
 
   const dismiss = async (id) => {
     setBanner(null);
@@ -61,8 +70,8 @@ export default function NotificationBanner({ userEmail }) {
           onClick={() => setShowList(!showList)}
           style={{
             minHeight:'44px',
-            background:'rgba(37, 99, 235, 0.08)',
-            border:'1px solid rgba(37, 99, 235, 0.16)',
+            background:'var(--secondary)',
+            border:`1px solid ${theme.border}`,
             borderRadius:'14px',
             padding:'8px 14px',
             cursor:'pointer',
@@ -71,7 +80,7 @@ export default function NotificationBanner({ userEmail }) {
             gap:'8px',
             fontSize:'14px',
             fontWeight:700,
-            color:'#2563eb',
+            color:theme.primary,
           }}
         >
           Alerts
@@ -83,16 +92,16 @@ export default function NotificationBanner({ userEmail }) {
         </button>
 
         {showList ? (
-          <div style={{ position:'absolute', right:0, top:'52px', width:'360px', background:'#fff', border:'1px solid #e2e8f0', borderRadius:'18px', boxShadow:'0 18px 40px rgba(15,23,42,0.16)', zIndex:1000, overflow:'hidden' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 16px', borderBottom:'1px solid #f1f5f9' }}>
-              <span style={{ fontWeight:800, fontSize:'14px', color:'#0f172a' }}>Notifications</span>
+          <div style={{ position:'absolute', right:0, top:'52px', width:'360px', background:theme.surface, border:`1px solid ${theme.border}`, borderRadius:'18px', boxShadow:'var(--shadow-lg)', zIndex:1000, overflow:'hidden' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 16px', borderBottom:`1px solid ${theme.border}` }}>
+              <span style={{ fontWeight:800, fontSize:'14px', color:theme.text }}>Notifications</span>
               {unread > 0 ? (
                 <button
                   onClick={async () => {
                     await markAllRead(userEmail);
                     fetchNotifications();
                   }}
-                  style={{ fontSize:'12px', color:'#2563eb', background:'none', border:'none', cursor:'pointer', fontWeight:700 }}
+                  style={{ fontSize:'12px', color:theme.primary, background:'none', border:'none', cursor:'pointer', fontWeight:700 }}
                 >
                   Mark all read
                 </button>
@@ -101,7 +110,7 @@ export default function NotificationBanner({ userEmail }) {
 
             <div style={{ maxHeight:'380px', overflowY:'auto' }}>
               {notifications.length === 0 ? (
-                <p style={{ textAlign:'center', color:'#94a3b8', padding:'24px', fontSize:'13px' }}>No notifications yet</p>
+                <p style={{ textAlign:'center', color:theme.muted, padding:'24px', fontSize:'13px' }}>No notifications yet</p>
               ) : (
                 notifications.map(notification => {
                   const config = typeConfig[notification.type] || typeConfig.reminder;
@@ -112,13 +121,13 @@ export default function NotificationBanner({ userEmail }) {
                         await markRead(notification._id);
                         fetchNotifications();
                       }}
-                      style={{ padding:'12px 16px', background:notification.isRead ? '#fff' : config.bg, borderBottom:'1px solid #f1f5f9', cursor:'pointer', borderLeft:`3px solid ${notification.isRead ? '#e2e8f0' : config.color}` }}
+                      style={{ padding:'12px 16px', background:notification.isRead ? theme.surface : config.bg, borderBottom:`1px solid ${theme.border}`, cursor:'pointer', borderLeft:`3px solid ${notification.isRead ? theme.border : config.color}` }}
                     >
                       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'4px' }}>
                         <span style={{ fontSize:'11px', fontWeight:700, color:config.color, background:config.bg, padding:'2px 8px', borderRadius:'20px', border:`1px solid ${config.border}` }}>{config.label}</span>
-                        <span style={{ fontSize:'11px', color:'#94a3b8' }}>{formatTime(notification.createdAt)}</span>
+                        <span style={{ fontSize:'11px', color:theme.muted }}>{formatTime(notification.createdAt)}</span>
                       </div>
-                      <p style={{ fontSize:'13px', color:'#374151', lineHeight:1.5 }}>{notification.message}</p>
+                      <p style={{ fontSize:'13px', color:theme.text, lineHeight:1.5 }}>{notification.message}</p>
                     </div>
                   );
                 })
@@ -131,13 +140,13 @@ export default function NotificationBanner({ userEmail }) {
       {banner ? (() => {
         const config = typeConfig[banner.type] || typeConfig.reminder;
         return (
-          <div style={{ position:'fixed', top:'20px', right:'20px', width:'380px', background:config.bg, border:`1px solid ${config.border}`, borderRadius:'16px', padding:'16px 18px', boxShadow:'0 18px 40px rgba(15,23,42,0.18)', zIndex:9999, animation:'slideInRight 0.4s ease' }}>
+          <div style={{ position:'fixed', top:'20px', right:'20px', width:'380px', background:config.bg, border:`1px solid ${config.border}`, borderRadius:'16px', padding:'16px 18px', boxShadow:'var(--shadow-lg)', zIndex:9999, animation:'slideInRight 0.4s ease' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'6px' }}>
               <span style={{ fontSize:'12px', fontWeight:700, color:config.color }}>{config.label}</span>
-              <button onClick={() => dismiss(banner._id)} style={{ background:'none', border:'none', cursor:'pointer', color:'#94a3b8', fontSize:'18px', lineHeight:1 }}>x</button>
+              <button onClick={() => dismiss(banner._id)} style={{ background:'none', border:'none', cursor:'pointer', color:theme.muted, fontSize:'18px', lineHeight:1 }}>x</button>
             </div>
-            <p style={{ fontSize:'13px', color:'#374151', lineHeight:1.5, marginBottom:'10px' }}>{banner.message}</p>
-            <div style={{ height:'3px', background:'#e2e8f0', borderRadius:'2px', overflow:'hidden' }}>
+            <p style={{ fontSize:'13px', color:theme.text, lineHeight:1.5, marginBottom:'10px' }}>{banner.message}</p>
+            <div style={{ height:'3px', background:theme.border, borderRadius:'2px', overflow:'hidden' }}>
               <div style={{ height:'100%', background:config.color, borderRadius:'2px', animation:'shrink 6s linear forwards' }} />
             </div>
           </div>

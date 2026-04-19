@@ -223,3 +223,17 @@
     display: none;
   }
 }
+
+html[data-theme="dark"] .footer {
+  background: linear-gradient(180deg, #050b15 0%, #0b1322 100%);
+}
+
+html[data-theme="dark"] .footer-description,
+html[data-theme="dark"] .footer-links-column a,
+html[data-theme="dark"] .footer-legal a {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .footer-copyright {
+  color: #64748b;
+}

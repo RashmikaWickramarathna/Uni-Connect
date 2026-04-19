@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { FiMonitor, FiMoon, FiSun } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import ApprovalRegistration from '../../components/society/ApprovalRegistration';
 import EventCalendar from '../../components/society/EventCalendar';
@@ -12,6 +13,7 @@ import {
   getSocietyEvents,
   updateEvent,
 } from '../../api/societyPortalApi';
+import { useTheme } from '../../context/ThemeContext';
 import {
   clearStoredSocietyUser,
   readStoredSocietyUser,
@@ -109,6 +111,7 @@ function StatCard({ active, accent, soft, label, note, short, value, onClick }) 
 
 export default function SocialDashboard() {
   const navigate = useNavigate();
+  const { theme, resolvedTheme, toggleTheme } = useTheme();
   const [user, setUser] = useState(() => readStoredSocietyUser());
   const [approvalToken, setApprovalToken] = useState(
     () => new URLSearchParams(window.location.search).get('approvalToken')
@@ -317,6 +320,13 @@ export default function SocialDashboard() {
     ...PAGE_META[pageKey],
     title: activeTab === 'create' && editData ? 'Edit Event' : PAGE_META[pageKey].title,
   };
+  const ThemeIcon = theme === 'system' ? FiMonitor : resolvedTheme === 'dark' ? FiSun : FiMoon;
+  const themeLabel =
+    theme === 'system'
+      ? 'Theme is following your system preference'
+      : resolvedTheme === 'dark'
+        ? 'Switch to light mode'
+        : 'Switch to dark mode';
 
   if (!approvalToken && !user) {
     return (
@@ -420,6 +430,16 @@ export default function SocialDashboard() {
               </div>
 
               <div className="panel-topbar-right">
+                <button
+                  type="button"
+                  className="panel-theme-button"
+                  onClick={toggleTheme}
+                  aria-label={themeLabel}
+                  title={themeLabel}
+                >
+                  <ThemeIcon />
+                  <span>{theme === 'system' ? 'System' : resolvedTheme === 'dark' ? 'Light' : 'Dark'}</span>
+                </button>
                 <NotificationBanner userEmail={user.email} />
                 <button type="button" className="panel-logout-button" onClick={handleLogout}>
                   Sign Out

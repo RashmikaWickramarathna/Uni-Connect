@@ -13,10 +13,8 @@ const PageWrapper = styled.div`
   position: relative;
   min-height: 100vh;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 28%),
-    radial-gradient(circle at bottom left, rgba(251, 191, 36, 0.14), transparent 26%),
-    linear-gradient(180deg, #f8fbff 0%, #ffffff 45%, #f8fbff 100%);
+  background: var(--background-gradient);
+  transition: background 0.2s ease, color 0.2s ease;
 
   &::before {
     content: '';
@@ -51,25 +49,26 @@ const Main = styled.main`
   padding: 7.5rem 2rem 3rem;
   max-width: 800px;
   margin: 0 auto;
+  color: var(--app-text);
 `;
 
 const BackButton = styled.button`
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(147, 197, 253, 0.7);
-  color: #2563eb;
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border);
+  color: var(--app-primary);
   padding: 0.7rem 1.1rem;
   border-radius: 999px;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   margin-bottom: 1rem;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--shadow-md);
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 
   &:hover {
-    background: #ffffff;
+    background: var(--app-surface);
     transform: translateY(-1px);
-    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.1);
+    box-shadow: var(--shadow-lg);
   }
 `;
 
@@ -77,15 +76,14 @@ const PageTitle = styled.h2`
   font-size: clamp(1.8rem, 2.8vw, 2.3rem);
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: #1f2937;
+  color: var(--app-text);
   margin-bottom: 1.5rem;
 `;
 
 const ProfileCard = styled(Card)`
-  background: rgba(255, 255, 255, 0.97);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(209, 213, 219, 0.72);
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border);
+  box-shadow: var(--shadow-lg);
   border-radius: 1.35rem;
   margin-bottom: 1.5rem;
 `;
@@ -138,14 +136,14 @@ const Alert = styled.div`
   font-size: 0.875rem;
   border-radius: 0.375rem;
   ${props => props.$variant === 'error' ? `
-    color: var(--destructive);
-    background-color: rgba(220, 38, 38, 0.1);
+    color: var(--app-danger);
+    background-color: rgba(239, 68, 68, 0.12);
   ` : props.$variant === 'success' ? `
-    color: #16a34a;
-    background-color: #dcfce7;
+    color: var(--app-success);
+    background-color: rgba(16, 185, 129, 0.12);
   ` : `
-    color: #d97706;
-    background-color: #fef3c7;
+    color: var(--app-warning);
+    background-color: rgba(245, 158, 11, 0.12);
   `}
 `;
 
@@ -165,8 +163,8 @@ const DangerButton = styled(Button)`
 const StyledInput = styled(Input)`
   &:focus {
     outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    border-color: var(--app-primary);
+    box-shadow: 0 0 0 3px var(--ring);
   }
 `;
 
@@ -184,18 +182,22 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border);
   border-radius: 1rem;
   padding: 2rem;
   max-width: 400px;
   width: 90%;
   text-align: center;
+  color: var(--app-text);
+  box-shadow: var(--shadow-lg);
 `;
 
 const ModalTitle = styled.h3`
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 1rem;
+  color: var(--app-text);
 `;
 
 const ModalText = styled.p`
@@ -219,8 +221,8 @@ const LoadingWrapper = styled.div`
 const Spinner = styled.div`
   width: 2rem;
   height: 2rem;
-  border: 3px solid #e2e8f0;
-  border-top-color: #2563eb;
+  border: 3px solid var(--app-border);
+  border-top-color: var(--app-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 

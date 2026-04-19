@@ -284,3 +284,29 @@
     font-size: 1.5rem;
   }
 }
+
+html[data-theme="dark"] .cta-section {
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(251, 191, 36, 0.12), transparent 24%),
+    linear-gradient(135deg, #081220 0%, #0e1a2e 100%);
+}
+
+html[data-theme="dark"] .cta-title {
+  color: #f8fbff;
+}
+
+html[data-theme="dark"] .cta-description {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .btn-cta-secondary {
+  background: rgba(16, 27, 47, 0.9);
+  color: #e5ecf8;
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+html[data-theme="dark"] .btn-cta-secondary:hover {
+  border-color: rgba(96, 165, 250, 0.38);
+  color: #93c5fd;
+}
