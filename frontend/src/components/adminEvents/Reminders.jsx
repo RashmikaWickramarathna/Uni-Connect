@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 
-import { getReminders } from "../../api/adminEventsApi";
+import { getImageUrl, getReminders } from "../../api/adminEventsApi";
 
 export default function Reminders({ events }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [brokenImages, setBrokenImages] = useState({});
 
   useEffect(() => {
     getReminders()
@@ -57,6 +58,52 @@ export default function Reminders({ events }) {
         })
       : "";
 
+  const handleImageError = (eventId) => {
+    setBrokenImages((current) => ({ ...current, [eventId]: true }));
+  };
+
+  const renderEventMedia = (event) => {
+    const imageUrl = getImageUrl(event.image);
+    const showImage = Boolean(imageUrl) && !brokenImages[event._id];
+
+    if (showImage) {
+      return (
+        <img
+          src={imageUrl}
+          alt={event.title || "Event image"}
+          onError={() => handleImageError(event._id)}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      );
+    }
+
+    return (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "grid",
+          placeItems: "center",
+          background: "linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)",
+          color: "#1d4ed8",
+          fontSize: "12px",
+          fontWeight: 800,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          textAlign: "center",
+          padding: "8px",
+        }}
+      >
+        {event.category || "Event"}
+      </div>
+    );
+  };
+
   return (
     <div>
       <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: "18px", padding: "22px", marginBottom: "20px", boxShadow: "0 10px 24px rgba(15,23,42,0.06)" }}>
@@ -85,11 +132,26 @@ export default function Reminders({ events }) {
               gap: "10px",
             }}
           >
-            <div>
-              <div style={{ fontWeight: 700, fontSize: "14px", color: "#0f172a", marginBottom: "3px" }}>{event.title || "Untitled Event"}</div>
-              <div style={{ fontSize: "12px", color: "#64748b" }}>{formatDate(event.date)} - {event.venue || "TBA"}</div>
-              <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "2px" }}>
-                {event.organizer || "Unknown Society"} | {event.organizerEmail || "No email available"}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: "260px", flex: 1 }}>
+              <div
+                style={{
+                  width: "88px",
+                  height: "64px",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  border: `1px solid ${urgencyBorder(event.daysUntil)}`,
+                  background: "#ffffff",
+                  flexShrink: 0,
+                }}
+              >
+                {renderEventMedia(event)}
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "14px", color: "#0f172a", marginBottom: "3px" }}>{event.title || "Untitled Event"}</div>
+                <div style={{ fontSize: "12px", color: "#64748b" }}>{formatDate(event.date)} - {event.venue || "TBA"}</div>
+                <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "2px" }}>
+                  {event.organizer || "Unknown Society"} | {event.organizerEmail || "No email available"}
+                </div>
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
@@ -113,10 +175,25 @@ export default function Reminders({ events }) {
         {soon.length === 0 ? <p style={{ color: "#94a3b8", fontSize: "13px", textAlign: "center", padding: "20px 0" }}>No events in this period.</p> : null}
 
         {soon.map((event) => (
-          <div key={event._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f1f5f9", flexWrap: "wrap", gap: "8px" }}>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: "14px", color: "#0f172a" }}>{event.title || "Untitled Event"}</div>
-              <div style={{ fontSize: "12px", color: "#64748b" }}>{formatDate(event.date)} - {event.venue || "TBA"}</div>
+          <div key={event._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f1f5f9", flexWrap: "wrap", gap: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: "260px", flex: 1 }}>
+              <div
+                style={{
+                  width: "82px",
+                  height: "58px",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  border: "1px solid #dbeafe",
+                  background: "#ffffff",
+                  flexShrink: 0,
+                }}
+              >
+                {renderEventMedia(event)}
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: "14px", color: "#0f172a" }}>{event.title || "Untitled Event"}</div>
+                <div style={{ fontSize: "12px", color: "#64748b" }}>{formatDate(event.date)} - {event.venue || "TBA"}</div>
+              </div>
             </div>
             <span style={{ background: "#eff6ff", color: "#2563eb", padding: "3px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>
               In {event.daysUntil} days

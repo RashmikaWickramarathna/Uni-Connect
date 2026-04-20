@@ -67,6 +67,7 @@ export default function EventsListPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
+  const [brokenImages, setBrokenImages] = useState({});
 
   useEffect(() => {
     fetch(`${API_BASE}/events/public`)
@@ -194,12 +195,27 @@ export default function EventsListPage() {
             const isSoldOut = Number(event.totalSeats || 0) > 0 && availableSeats <= 0;
             const minPrice = getMinTicketPrice(event.tickets);
             const imageUrl = getDisplayImage(event);
+            const showImage = Boolean(imageUrl) && !brokenImages[event._id];
 
             return (
               <article key={event._id} className="el-card">
-                <div className="el-card-banner">
-                  {imageUrl ? (
-                    <img src={imageUrl} alt={event.title} className="el-banner-img" />
+                <div
+                  className={`el-card-banner ${showImage ? "has-image" : ""}`}
+                  style={showImage ? { "--el-banner-image": `url("${imageUrl}")` } : undefined}
+                >
+                  {showImage ? (
+                    <img
+                      src={imageUrl}
+                      alt={event.title}
+                      className="el-banner-img"
+                      loading="lazy"
+                      onError={() =>
+                        setBrokenImages((current) => ({
+                          ...current,
+                          [event._id]: true,
+                        }))
+                      }
+                    />
                   ) : (
                     <div className="el-banner-placeholder">
                       <span>🎓</span>

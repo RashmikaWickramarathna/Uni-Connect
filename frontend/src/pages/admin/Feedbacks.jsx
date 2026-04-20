@@ -136,17 +136,17 @@ export default function Feedbacks() {
                             }
                           />
                           <div className="actions">
-                            <button className="btn primary small" type="button" onClick={() => handleReply(feedback._id)}>
+                            <button className="btn feedback-primary small" type="button" onClick={() => handleReply(feedback._id)}>
                               Send Reply
                             </button>
-                            <button className="btn small" type="button" onClick={() => setActiveId(null)}>
+                            <button className="btn feedback-secondary small" type="button" onClick={() => setActiveId(null)}>
                               Cancel
                             </button>
                           </div>
                         </>
                       ) : (
                         <div className="actions">
-                          <button className="btn small" type="button" onClick={() => setActiveId(feedback._id)}>
+                          <button className="btn feedback small" type="button" onClick={() => setActiveId(feedback._id)}>
                             Reply to Feedback
                           </button>
                         </div>

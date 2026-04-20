@@ -199,8 +199,8 @@ export default function AdminPaymentsPage() {
             <SmallStatCard label="Failed" value={failedSummary.count} color="#ef4444" icon="Fail" />
           </div>
 
-          <div className="dashboard-summary-card">
-            <div className="summary-copy">
+          <div className="dashboard-summary-card payment-summary-card">
+            <div className="summary-copy payment-summary-copy">
               <h3>Payment Operations</h3>
               <p>
                 Pending cash ticket payments can be confirmed here or from{" "}
@@ -210,7 +210,7 @@ export default function AdminPaymentsPage() {
                 . Use filters to narrow down the admin list quickly.
               </p>
             </div>
-            <div className="summary-stats">
+            <div className="summary-stats payment-summary-stats">
               <div className="summary-stat">
                 <div className="summary-value">{pendingSummary.count}</div>
                 <div className="summary-label">Pending</div>
@@ -304,12 +304,12 @@ export default function AdminPaymentsPage() {
                           <div>
                             <strong>{payment.applicantName || "Unknown Student"}</strong>
                           </div>
-                          <div style={{ marginTop: "0.4rem", color: "#64748b" }}>{payment.studentId || "-"}</div>
-                          <div style={{ marginTop: "0.3rem", color: "#94a3b8" }}>{payment.email || "-"}</div>
+                          <div className="table-secondary-text">{payment.studentId || "-"}</div>
+                          <div className="table-tertiary-text">{payment.email || "-"}</div>
                         </td>
                         <td>
                           <div>{description}</div>
-                          <div style={{ marginTop: "0.4rem", color: "#64748b" }}>
+                          <div className="table-secondary-text">
                             {payment.eventId?.title || payment.eventName || "No linked event"}
                           </div>
                         </td>
@@ -337,7 +337,7 @@ export default function AdminPaymentsPage() {
                               {confirmingId === payment._id ? "Confirming..." : "Mark Completed"}
                             </button>
                           ) : (
-                            <span style={{ color: "#64748b", fontWeight: 700 }}>
+                            <span className="table-status-text">
                               {payment.status === "completed" ? "Settled" : "No action"}
                             </span>
                           )}
@@ -352,7 +352,7 @@ export default function AdminPaymentsPage() {
 
           {pagination.pages > 1 && (
             <div className="page-actions" style={{ marginTop: "1rem", justifyContent: "space-between" }}>
-              <div style={{ color: "#64748b", fontWeight: 600 }}>
+              <div className="pagination-note">
                 Page {pagination.page} of {pagination.pages}
               </div>
               <div className="actions">

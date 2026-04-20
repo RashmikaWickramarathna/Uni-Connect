@@ -44,8 +44,8 @@
   padding: 0.65rem 1rem;
   border-radius: 999px;
   border: 1px solid var(--admin-border);
-  background: #ffffff;
-  color: var(--admin-muted);
+  background: var(--admin-card);
+  color: var(--admin-heading, var(--admin-text));
   font: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -120,7 +120,7 @@
 .events-spotlight-stat {
   padding: 1rem;
   border-radius: 18px;
-  background: #ecf3fb;
+  background: var(--app-surface-muted);
   border: 1px solid var(--admin-border);
 }
 
@@ -173,7 +173,11 @@
 
 .events-stat-card.is-active {
   border-color: rgba(37, 99, 235, 0.24);
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--admin-card) 96%, #ffffff 4%) 0%,
+    var(--app-surface-muted) 100%
+  );
 }
 
 .events-stat-card-header {
@@ -236,9 +240,13 @@
   padding: 0.95rem 1rem;
   border: 1px solid var(--admin-border);
   border-radius: 16px;
-  background: #ffffff;
+  background: var(--admin-card);
   color: var(--admin-text);
   outline: none;
+}
+
+.events-search-input::placeholder {
+  color: var(--admin-muted);
 }
 
 .events-search-input:focus {
@@ -257,8 +265,8 @@
   padding: 0.7rem 1rem;
   border-radius: 14px;
   border: 1px solid var(--admin-border);
-  background: #ffffff;
-  color: var(--admin-muted);
+  background: var(--admin-card);
+  color: var(--admin-heading, var(--admin-text));
   font: inherit;
   font-weight: 700;
   cursor: pointer;

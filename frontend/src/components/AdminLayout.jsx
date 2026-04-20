@@ -102,7 +102,7 @@ export default function AdminLayout({
           <span className="mi-label">Logout</span>
         </button>
 
-        <div className="sidebar-footer">v1.0 • Uni-Connect • {resolvedTheme}</div>
+        <div className="sidebar-footer">v1.0 | Uni-Connect | {resolvedTheme}</div>
       </aside>
 
       <div className="admin-main">

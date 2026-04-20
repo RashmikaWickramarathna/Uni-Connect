@@ -32,9 +32,11 @@ const buttonStyle = (bg, color, border) => ({
 });
 
 export default function AdminEventCard({ event, onApprove, onReject, onDelete, onEdit }) {
+  const [imageFailed, setImageFailed] = React.useState(false);
   const status = STATUS_CONFIG[event.status] || STATUS_CONFIG.pending;
   const categoryColor = CATEGORY_COLORS[event.category] || "#64748b";
   const imageUrl = getImageUrl(event.image);
+  const showImage = Boolean(imageUrl) && !imageFailed;
   const organizer = event.organizer || "Unknown Society";
   const organizerEmail = event.organizerEmail || "No email available";
   const venue = event.venue || "TBA";
@@ -85,8 +87,8 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
     position: "relative",
     height: "180px",
     padding: "12px",
-    background: "#f8fafc",
-    borderBottom: "1px solid #e2e8f0",
+    background: "var(--app-surface-muted)",
+    borderBottom: "1px solid var(--admin-border)",
   };
   const imageStyle = {
     width: "100%",
@@ -95,11 +97,15 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
     display: "block",
   };
 
+  React.useEffect(() => {
+    setImageFailed(false);
+  }, [imageUrl]);
+
   return (
     <div
       style={{
-        background: "#fff",
-        border: "1px solid #e2e8f0",
+        background: "var(--admin-card)",
+        border: "1px solid var(--admin-border)",
         borderRadius: "18px",
         marginBottom: "16px",
         overflow: "hidden",
@@ -114,9 +120,9 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
         eventNode.currentTarget.style.boxShadow = "0 10px 24px rgba(15,23,42,0.06)";
       }}
     >
-      {imageUrl ? (
+      {showImage ? (
         <div style={imageFrame}>
-          <img src={imageUrl} alt={title} style={imageStyle} />
+          <img src={imageUrl} alt={title} style={imageStyle} onError={() => setImageFailed(true)} />
           <span
             style={{
               position: "absolute",
@@ -139,7 +145,7 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
         <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: "280px" }}>
             <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap", alignItems: "center" }}>
-              {!imageUrl ? (
+              {!showImage ? (
                 <span
                   style={{
                     background: `${categoryColor}15`,
@@ -183,25 +189,41 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
               ) : null}
             </div>
 
-            <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#0f172a", marginBottom: "4px" }}>
+            <h3
+              style={{
+                fontSize: "17px",
+                fontWeight: 700,
+                color: "var(--admin-heading, var(--admin-text))",
+                marginBottom: "4px",
+              }}
+            >
               {title}
             </h3>
-            <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "10px", lineHeight: 1.6 }}>
+            <p style={{ fontSize: "13px", color: "var(--admin-muted)", marginBottom: "10px", lineHeight: 1.6 }}>
               {description}
             </p>
 
-            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "13px", color: "#94a3b8", marginBottom: "10px" }}>
-              <span><strong style={{ color: "#374151" }}>Date:</strong> {formatDate(event.date)}</span>
-              <span><strong style={{ color: "#374151" }}>Time:</strong> {formatTime(event.time)}</span>
-              <span><strong style={{ color: "#374151" }}>Venue:</strong> {venue}</span>
-              <span><strong style={{ color: "#374151" }}>Max:</strong> {maxParticipants}</span>
+            <div
+              style={{
+                display: "flex",
+                gap: "16px",
+                flexWrap: "wrap",
+                fontSize: "13px",
+                color: "var(--admin-muted)",
+                marginBottom: "10px",
+              }}
+            >
+              <span><strong style={{ color: "var(--admin-heading, var(--admin-text))" }}>Date:</strong> {formatDate(event.date)}</span>
+              <span><strong style={{ color: "var(--admin-heading, var(--admin-text))" }}>Time:</strong> {formatTime(event.time)}</span>
+              <span><strong style={{ color: "var(--admin-heading, var(--admin-text))" }}>Venue:</strong> {venue}</span>
+              <span><strong style={{ color: "var(--admin-heading, var(--admin-text))" }}>Max:</strong> {maxParticipants}</span>
               {minPrice !== null ? (
                 <span>
-                  <strong style={{ color: "#374151" }}>Ticket Price:</strong>{" "}
+                  <strong style={{ color: "var(--admin-heading, var(--admin-text))" }}>Ticket Price:</strong>{" "}
                   {minPrice === 0 ? "Free" : `From ${formatTicketPrice(minPrice)}`}
                 </span>
               ) : null}
-              {event.views > 0 ? <span><strong style={{ color: "#374151" }}>Views:</strong> {event.views}</span> : null}
+              {event.views > 0 ? <span><strong style={{ color: "var(--admin-heading, var(--admin-text))" }}>Views:</strong> {event.views}</span> : null}
             </div>
 
             {ticketOptions.length > 0 ? (
@@ -217,8 +239,8 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
                   <span
                     key={`${ticket.type}-${index}`}
                     style={{
-                      background: "#eef2ff",
-                      color: "#3730a3",
+                      background: "var(--app-surface-elevated)",
+                      color: "var(--admin-primary)",
                       padding: "4px 10px",
                       borderRadius: "999px",
                       fontSize: "11px",
@@ -233,19 +255,20 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
 
             <div
               style={{
-                background: "#f8fafc",
-                border: "1px solid #e2e8f0",
+                background: "var(--app-surface-muted)",
+                border: "1px solid var(--admin-border)",
                 borderRadius: "12px",
                 padding: "10px 14px",
                 fontSize: "13px",
+                color: "var(--admin-text)",
                 display: "flex",
                 gap: "20px",
                 flexWrap: "wrap",
               }}
             >
-              <span><strong style={{ color: "#374151" }}>Society:</strong> {organizer}</span>
-              <span><strong style={{ color: "#374151" }}>Email:</strong> {organizerEmail}</span>
-              <span><strong style={{ color: "#374151" }}>Submitted:</strong> {formatDateTime(event.createdAt)}</span>
+              <span><strong style={{ color: "var(--admin-heading, var(--admin-text))" }}>Society:</strong> {organizer}</span>
+              <span><strong style={{ color: "var(--admin-heading, var(--admin-text))" }}>Email:</strong> {organizerEmail}</span>
+              <span><strong style={{ color: "var(--admin-heading, var(--admin-text))" }}>Submitted:</strong> {formatDateTime(event.createdAt)}</span>
             </div>
 
             {event.tags && event.tags.length > 0 ? (
@@ -254,8 +277,8 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
                   <span
                     key={index}
                     style={{
-                      background: "#f1f5f9",
-                      color: "#64748b",
+                      background: "var(--app-surface-elevated)",
+                      color: "var(--admin-muted)",
                       padding: "2px 10px",
                       borderRadius: "20px",
                       fontSize: "11px",
@@ -281,7 +304,7 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
                 <strong style={{ color: "#b91c1c" }}>Rejection Reason:</strong>
                 <span style={{ color: "#dc2626", marginLeft: "8px" }}>{event.adminReason}</span>
                 {event.adminActionAt ? (
-                  <span style={{ color: "#94a3b8", fontSize: "11px", marginLeft: "10px" }}>
+                  <span style={{ color: "var(--admin-muted)", fontSize: "11px", marginLeft: "10px" }}>
                     - {formatDateTime(event.adminActionAt)}
                   </span>
                 ) : null}
@@ -300,7 +323,10 @@ export default function AdminEventCard({ event, onApprove, onReject, onDelete, o
                 Reject
               </button>
             ) : null}
-            <button onClick={() => onEdit(event)} style={buttonStyle("#f8fafc", "#374151", "#e2e8f0")}>
+            <button
+              onClick={() => onEdit(event)}
+              style={buttonStyle("var(--app-surface-elevated)", "var(--admin-heading, var(--admin-text))", "var(--admin-border)")}
+            >
               Edit
             </button>
             <button onClick={() => onDelete(event)} style={buttonStyle("#fef2f2", "#dc2626", "#fca5a5")}>
