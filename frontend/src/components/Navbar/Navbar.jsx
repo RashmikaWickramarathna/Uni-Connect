@@ -19,8 +19,21 @@ const Navbar = () => {
   const isLoggedIn = Boolean(user);
   const dashboardPath = userRole === 'admin' ? '/admin' : '/';
   const userLabel = user?.name || user?.email?.split('@')[0] || (userRole === 'admin' ? 'Admin' : 'Student');
+  const studentAreaPrefixes = [
+    '/',
+    '/home',
+    '/events',
+    '/my-feedbacks',
+    '/my-inquiries',
+    '/profile',
+    '/my-tickets',
+    '/payment-history',
+  ];
   const isStudentArea =
-    userRole === 'student' && ['/', '/home', '/my-feedbacks', '/my-inquiries', '/profile'].includes(location.pathname);
+    userRole === 'student' &&
+    studentAreaPrefixes.some((path) =>
+      path === '/' ? ['/', '/home'].includes(location.pathname) : location.pathname.startsWith(path)
+    );
   const ThemeIcon = theme === 'system' ? FiMonitor : resolvedTheme === 'dark' ? FiSun : FiMoon;
   const themeButtonText =
     theme === 'system' ? 'System' : resolvedTheme === 'dark' ? 'Light' : 'Dark';
