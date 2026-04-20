@@ -1,0 +1,58 @@
+:root{
+  --bg: #ffffff;
+  --text: #111827;
+  --card: #f8fafc;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --danger: #ef4444;
+}
+
+.theme-dark{
+  --bg: #0b1220;
+  --text: #e5e7eb;
+  --card: #0f1724;
+  --muted: #9ca3af;
+  --accent: #60a5fa;
+  --danger: #f87171;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  transition: background 200ms ease, color 200ms ease;
+  min-height: 100%;
+}
+
+.dashboard-root, .card-grid, .table-wrap, .welcome-card, .soc-card, .event-card, .stat-card, .small-stat-card {
+  color: var(--text);
+}
+
+.soc-card, .event-card, .welcome-card, .stat-card, .small-stat-card {
+  background: var(--card);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.btn {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--muted);
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+}
+
+.btn.danger {
+  background: var(--danger);
+  color: #fff;
+  border: none;
+}
+
+.dashboard-header { gap: 12px; }
+.theme-toggle { display: flex; align-items: center; }
