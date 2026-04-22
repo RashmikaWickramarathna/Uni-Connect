@@ -49,7 +49,7 @@ function PaymentMethodStep({
     referenceNumber: "",
   });
 
-  const [onlineDetails, setOnlineDetails] = useState({
+    const [onlineDetails, setOnlineDetails] = useState({
     cardholderName: "",
     cardNumber: "",
     expiryDate: "",
@@ -94,11 +94,11 @@ function PaymentMethodStep({
       if (onlineDetails.cardNumber.replace(/\s/g, "").length !== 16) {
         return setLocalError("Enter a valid 16-digit card number.");
       }
-      if (!/^\d{4}-\d{2}$/.test(onlineDetails.expiryDate)) {
-        return setLocalError("Select a valid expiry month.");
+      if (!onlineDetails.expiryDate) {
+        return setLocalError("Select expiry date.");
       }
-      if (onlineDetails.expiryDate < currentMonth) {
-        return setLocalError("Card expiry month cannot be in the past.");
+      if (new Date(onlineDetails.expiryDate) < new Date()) {
+        return setLocalError("Card expiry date cannot be in the past.");
       }
       if (onlineDetails.cvv.length !== 3) {
         return setLocalError("Enter a valid 3-digit CVV.");
@@ -242,11 +242,11 @@ function PaymentMethodStep({
               />
             </div>
             <div className="form-group">
-              <label>Expiry Date *</label>
+              <label>Expiry Date (MM/DD/YYYY) *</label>
               <input
                 name="expiryDate"
-                type="month"
-                min={currentMonth}
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
                 value={onlineDetails.expiryDate}
                 onChange={handleOnlineChange}
               />

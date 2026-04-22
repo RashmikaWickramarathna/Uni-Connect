@@ -223,6 +223,20 @@ export default function MyTicketsPage() {
                             event.stopPropagation();
                             setShowDownloadModal(ticket._id);
                           }}
+                          style={{
+                            padding: '0.6rem 1.25rem',
+                            background: 'linear-gradient(135deg, var(--app-primary), var(--app-primary-strong))',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            fontWeight: '700',
+                            fontSize: '0.9rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 4px 15px rgba(37, 99, 235, 0.3)'
+                          }}
+                          onMouseOver={(e) => e.target.style.transform = 'translateY(-1px)'}
+                          onMouseOut={(e) => e.target.style.transform = 'none'}
                         >
                           Download Ticket
                         </button>
@@ -287,10 +301,17 @@ export default function MyTicketsPage() {
                     </div>
 
                     {showDownloadModal ? (
-                      <TicketDownload
-                        ticket={tickets.find((item) => item._id === showDownloadModal)}
-                        onClose={() => setShowDownloadModal(null)}
-                      />
+                      <>
+                        <div className="ticket-download-modal" onClick={() => setShowDownloadModal(null)}>
+                          <TicketDownload
+                            ticket={tickets.find((item) => item._id === showDownloadModal)}
+                            onClose={() => setShowDownloadModal(null)}
+                          />
+                        </div>
+                        <style>{`
+                          @import url('TicketDownloadModal.css');
+                        `}</style>
+                      </>
                     ) : null}
 
                     {isExpanded ? (
