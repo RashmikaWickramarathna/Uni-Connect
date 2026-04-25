@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { getUsers, addUser, updateUser, deleteUser } = require("../Controllers/admin_User_Controller");
+const { getUsers, addUser, updateUser, deleteUser } = require("../controllers/admin_User_Controller");
 
 const collections = [
   "users",

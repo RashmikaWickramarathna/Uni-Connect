@@ -102,8 +102,6 @@ ticketSchema.pre("save", async function (next) {
 // ── Indexes ───────────────────────────────────
 ticketSchema.index({ studentId: 1, bookedAt: -1 });
 ticketSchema.index({ eventId: 1, status: 1 });
-ticketSchema.index({ paymentIntentId: 1 });
-ticketSchema.index({ ticketNumber: 1 });
 ticketSchema.index({ status: 1 });
 
 // ── Compound index to prevent duplicate bookings ──
