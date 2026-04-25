@@ -13,8 +13,35 @@
   max-width: 1300px;
   margin: 0 auto;
   padding: 0 0 2rem;
-  font-family: Arial, sans-serif;
+  font-family: inherit;
   color: var(--ab-text);
+}
+
+.ab-page *,
+.ab-page button,
+.ab-page input,
+.ab-page select,
+.ab-page textarea,
+.ab-page table,
+.ab-page td {
+  font-family: inherit;
+}
+
+.ab-page .ab-title,
+.ab-page .ab-stat-value,
+.ab-page .ab-empty h3,
+.ab-page .ab-modal-title,
+.ab-page .ab-search-wrap > span,
+.ab-page .ab-table th {
+  font-family: inherit;
+}
+
+.ab-page .ab-title,
+.ab-page .ab-stat-value,
+.ab-page .ab-empty h3,
+.ab-page .ab-modal-title {
+  font-weight: 800;
+  letter-spacing: normal;
 }
 
 /* ── Header ── */
