@@ -11,7 +11,7 @@ export const InputStyled = styled.input`
   font-size: 1rem;
   color: var(--foreground);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
-
+  
   &::placeholder {
     color: var(--muted-foreground);
   }

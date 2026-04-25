@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authApi } from '../../api/authApi';
-import Navbar from '../../components/Navbar/Navbar';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -10,81 +9,94 @@ import { Label } from '../../components/ui/Label';
 import styled from 'styled-components';
 
 const PageWrapper = styled.div`
-  position: relative;
   min-height: 100vh;
-  overflow: hidden;
-  background: var(--background-gradient);
-  transition: background 0.2s ease, color 0.2s ease;
+  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1492538368677-f6e0afe31dcc?q=80&w=2370&auto=format&fit=crop');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+`;
 
-  &::before {
-    content: '';
-    position: fixed;
-    top: 6rem;
-    right: -9rem;
-    width: 24rem;
-    height: 24rem;
-    border-radius: 50%;
-    background: rgba(37, 99, 235, 0.08);
-    filter: blur(12px);
-    pointer-events: none;
-  }
+const Header = styled.header`
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+  color: white;
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+`;
 
-  &::after {
-    content: '';
-    position: fixed;
-    left: -8rem;
-    bottom: 2rem;
-    width: 22rem;
-    height: 22rem;
-    border-radius: 50%;
-    background: rgba(251, 191, 36, 0.08);
-    filter: blur(14px);
-    pointer-events: none;
-  }
+const HeaderContent = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const Logo = styled.h1`
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: black;
+`;
+
+const LogoIcon = styled.span`
+  width: 2.5rem;
+  height: 2.5rem;
+  background: white;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+  font-weight: bold;
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
+const UserBadge = styled.div`
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  font-size: 0.875rem;
 `;
 
 const Main = styled.main`
-  position: relative;
-  z-index: 1;
-  padding: 7.5rem 2rem 3rem;
+  padding: 2rem;
   max-width: 800px;
   margin: 0 auto;
-  color: var(--app-text);
 `;
 
 const BackButton = styled.button`
-  background: var(--app-surface-elevated);
-  border: 1px solid var(--app-border);
-  color: var(--app-primary);
-  padding: 0.7rem 1.1rem;
-  border-radius: 999px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
   cursor: pointer;
   margin-bottom: 1rem;
-  box-shadow: var(--shadow-md);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 
   &:hover {
-    background: var(--app-surface);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-lg);
+    background: rgba(255, 255, 255, 0.3);
   }
 `;
 
 const PageTitle = styled.h2`
-  font-size: clamp(1.8rem, 2.8vw, 2.3rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--app-text);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
   margin-bottom: 1.5rem;
 `;
 
 const ProfileCard = styled(Card)`
-  background: var(--app-surface-elevated);
-  border: 1px solid var(--app-border);
-  box-shadow: var(--shadow-lg);
-  border-radius: 1.35rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
   margin-bottom: 1.5rem;
 `;
 
@@ -136,14 +148,14 @@ const Alert = styled.div`
   font-size: 0.875rem;
   border-radius: 0.375rem;
   ${props => props.$variant === 'error' ? `
-    color: var(--app-danger);
-    background-color: rgba(239, 68, 68, 0.12);
+    color: var(--destructive);
+    background-color: rgba(220, 38, 38, 0.1);
   ` : props.$variant === 'success' ? `
-    color: var(--app-success);
-    background-color: rgba(16, 185, 129, 0.12);
+    color: #16a34a;
+    background-color: #dcfce7;
   ` : `
-    color: var(--app-warning);
-    background-color: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+    background-color: #fef3c7;
   `}
 `;
 
@@ -163,8 +175,8 @@ const DangerButton = styled(Button)`
 const StyledInput = styled(Input)`
   &:focus {
     outline: none;
-    border-color: var(--app-primary);
-    box-shadow: 0 0 0 3px var(--ring);
+    border-color: #ec4899;
+    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2);
   }
 `;
 
@@ -182,22 +194,18 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: var(--app-surface-elevated);
-  border: 1px solid var(--app-border);
+  background: white;
   border-radius: 1rem;
   padding: 2rem;
   max-width: 400px;
   width: 90%;
   text-align: center;
-  color: var(--app-text);
-  box-shadow: var(--shadow-lg);
 `;
 
 const ModalTitle = styled.h3`
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 1rem;
-  color: var(--app-text);
 `;
 
 const ModalText = styled.p`
@@ -221,8 +229,8 @@ const LoadingWrapper = styled.div`
 const Spinner = styled.div`
   width: 2rem;
   height: 2rem;
-  border: 3px solid var(--app-border);
-  border-top-color: var(--app-primary);
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -247,9 +255,14 @@ export default function Profile() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const fetchUserData = useCallback(async () => {
+  useEffect(() => {
+    fetchUserData();
+  }, [user?.userId]);
+
+  const fetchUserData = async () => {
     if (!user?.userId) {
       setLoading(false);
       return;
@@ -263,20 +276,14 @@ export default function Profile() {
           mobile: res.data.user.mobile || '',
         });
       }
-    } catch (error) {
+    } catch (err) {
       setFormData({
         name: user.email?.split('@')[0] || '',
         mobile: '',
       });
-      console.error('Failed to fetch user data', error);
-    } finally {
-      setLoading(false);
     }
-  }, [user?.userId, user?.email]);
-
-  useEffect(() => {
-    fetchUserData();
-  }, [fetchUserData]);
+    setLoading(false);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -315,6 +322,12 @@ export default function Profile() {
     setSubmitting(false);
   };
 
+  const handleLogout = () => {
+    logout();
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
   const handleDelete = async () => {
     setSubmitting(true);
     try {
@@ -322,8 +335,7 @@ export default function Profile() {
       logout();
       localStorage.removeItem('user');
       navigate('/login');
-    } catch (error) {
-      console.error('Failed to delete account', error);
+    } catch (err) {
       alert('Failed to delete account');
       setSubmitting(false);
     }
@@ -344,7 +356,23 @@ export default function Profile() {
 
   return (
     <PageWrapper>
-      <Navbar />
+      <Header>
+        <HeaderContent>
+          <Logo>
+            <LogoIcon>U</LogoIcon>
+            University Portal
+          </Logo>
+          <HeaderRight>
+            <UserBadge>Student: {user?.email?.split('@')[0]}</UserBadge>
+            <Button variant="secondary" size="sm" onClick={() => navigate('/home')}>
+              Dashboard
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setShowLogoutModal(true)}>
+              Logout
+            </Button>
+          </HeaderRight>
+        </HeaderContent>
+      </Header>
 
       <Main>
         <BackButton onClick={() => navigate('/home')}>← Back to Dashboard</BackButton>
@@ -428,6 +456,23 @@ export default function Profile() {
           </CardContent>
         </ProfileCard>
       </Main>
+
+      {showLogoutModal && (
+        <Modal onClick={() => setShowLogoutModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>Confirm Logout</ModalTitle>
+            <ModalText>Are you sure you want to logout?</ModalText>
+            <ModalButtons>
+              <Button variant="outline" onClick={() => setShowLogoutModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleLogout}>
+                Logout
+              </Button>
+            </ModalButtons>
+          </ModalContent>
+        </Modal>
+      )}
 
       {showDeleteModal && (
         <Modal onClick={() => setShowDeleteModal(false)}>

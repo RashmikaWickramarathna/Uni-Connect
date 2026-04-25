@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { feedbackApi } from '../../api/feedbackApi';
-import Navbar from '../../components/Navbar/Navbar';
-import { Card, CardContent } from '../../components/ui/Card';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
@@ -11,83 +10,96 @@ import { Textarea } from '../../components/ui/Label';
 import styled from 'styled-components';
 
 const PageWrapper = styled.div`
-  position: relative;
   min-height: 100vh;
-  overflow: hidden;
-  background: var(--background-gradient);
-  transition: background 0.2s ease, color 0.2s ease;
+  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1492538368677-f6e0afe31dcc?q=80&w=2370&auto=format&fit=crop');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+`;
 
-  &::before {
-    content: '';
-    position: fixed;
-    top: 6rem;
-    right: -9rem;
-    width: 24rem;
-    height: 24rem;
-    border-radius: 50%;
-    background: rgba(37, 99, 235, 0.08);
-    filter: blur(12px);
-    pointer-events: none;
-  }
+const Header = styled.header`
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+  color: white;
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+`;
 
-  &::after {
-    content: '';
-    position: fixed;
-    left: -8rem;
-    bottom: 2rem;
-    width: 22rem;
-    height: 22rem;
-    border-radius: 50%;
-    background: rgba(251, 191, 36, 0.08);
-    filter: blur(14px);
-    pointer-events: none;
-  }
+const HeaderContent = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const Logo = styled.h1`
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: black;
+`;
+
+const LogoIcon = styled.span`
+  width: 2.5rem;
+  height: 2.5rem;
+  background: white;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+  font-weight: bold;
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
+const UserBadge = styled.div`
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  font-size: 0.875rem;
 `;
 
 const Main = styled.main`
-  position: relative;
-  z-index: 1;
-  padding: 7.5rem 2rem 3rem;
+  padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
-  color: var(--app-text);
 `;
 
 const PageTitle = styled.h2`
-  font-size: clamp(1.8rem, 2.8vw, 2.3rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--app-text);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
   margin-bottom: 1.5rem;
 `;
 
 const BackButton = styled.button`
-  background: var(--app-surface-elevated);
-  border: 1px solid var(--app-border);
-  color: var(--app-primary);
-  padding: 0.7rem 1.1rem;
-  border-radius: 999px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
   cursor: pointer;
   margin-bottom: 1rem;
-  box-shadow: var(--shadow-md);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 
   &:hover {
-    background: var(--app-surface);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-lg);
+    background: rgba(255, 255, 255, 0.3);
   }
 `;
 
 const Section = styled.div`
-  background: var(--app-surface-elevated);
-  border: 1px solid var(--app-border);
-  border-radius: 1.35rem;
-  box-shadow: var(--shadow-lg);
-  padding: 1.75rem;
-  margin-bottom: 1.75rem;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
 `;
 
 const SectionTitle = styled.h3`
@@ -118,19 +130,19 @@ const Alert = styled.div`
   font-size: 0.875rem;
   border-radius: 0.375rem;
   ${props => props.$variant === 'error' ? `
-    color: var(--app-danger);
-    background-color: rgba(239, 68, 68, 0.12);
+    color: var(--destructive);
+    background-color: rgba(220, 38, 38, 0.1);
   ` : `
-    color: var(--app-success);
-    background-color: rgba(16, 185, 129, 0.12);
+    color: #16a34a;
+    background-color: #dcfce7;
   `}
 `;
 
 const StyledInput = styled(Input)`
   &:focus {
     outline: none;
-    border-color: var(--app-primary);
-    box-shadow: 0 0 0 3px var(--ring);
+    border-color: #ec4899;
+    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2);
   }
 `;
 
@@ -141,9 +153,9 @@ const FeedbackList = styled.div`
 `;
 
 const FeedbackCard = styled(Card)`
-  background: var(--app-surface-elevated);
-  border: 1px solid var(--app-border);
-  box-shadow: var(--shadow-md);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
 `;
 
 const FeedbackHeader = styled.div`
@@ -178,13 +190,11 @@ const StatusBadge = styled.span`
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
   ${props => props.$replied ? `
-    background: rgba(16, 185, 129, 0.14);
-    color: var(--app-success);
-    border: 1px solid rgba(16, 185, 129, 0.22);
+    background: #dcfce7;
+    color: #16a34a;
   ` : `
-    background: rgba(245, 158, 11, 0.14);
-    color: var(--app-warning);
-    border: 1px solid rgba(245, 158, 11, 0.22);
+    background: #fef3c7;
+    color: #d97706;
   `}
 `;
 
@@ -195,9 +205,8 @@ const ActionButtons = styled.div`
 `;
 
 const ReplyBox = styled.div`
-  background: rgba(37, 99, 235, 0.08);
-  border: 1px solid rgba(37, 99, 235, 0.16);
-  border-left: 3px solid var(--app-primary);
+  background: #f0f9ff;
+  border-left: 3px solid #2563eb;
   padding: 0.75rem 1rem;
   border-radius: 0 0.375rem 0.375rem 0;
   margin-top: 0.75rem;
@@ -206,7 +215,7 @@ const ReplyBox = styled.div`
 const ReplyLabel = styled.p`
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--app-primary);
+  color: #2563eb;
   text-transform: uppercase;
 `;
 
@@ -231,8 +240,8 @@ const LoadingWrapper = styled.div`
 const Spinner = styled.div`
   width: 2rem;
   height: 2rem;
-  border: 3px solid var(--app-border);
-  border-top-color: var(--app-primary);
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 
@@ -242,19 +251,8 @@ const Spinner = styled.div`
   }
 `;
 
-const selectStyles = {
-  width: '100%',
-  height: '2.75rem',
-  padding: '0 0.85rem',
-  borderRadius: '0.75rem',
-  border: '1px solid var(--app-border)',
-  backgroundColor: 'var(--app-surface-elevated)',
-  color: 'var(--app-text)',
-  fontSize: '0.875rem',
-};
-
 export default function MyFeedbacks() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [feedbacks, setFeedbacks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -275,25 +273,19 @@ export default function MyFeedbacks() {
   const [editError, setEditError] = useState('');
   const [editSuccess, setEditSuccess] = useState('');
 
-  const fetchFeedbacks = useCallback(async () => {
-    if (!user?.userId) {
-      setLoading(false);
-      return;
-    }
+  useEffect(() => {
+    fetchFeedbacks();
+  }, []);
 
+  const fetchFeedbacks = async () => {
     try {
       const res = await feedbackApi.getMy(user.userId);
       setFeedbacks(res.data.feedbacks || []);
-    } catch (error) {
-      console.error('Failed to fetch feedbacks', error);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error('Failed to fetch feedbacks');
     }
-  }, [user?.userId]);
-
-  useEffect(() => {
-    fetchFeedbacks();
-  }, [fetchFeedbacks]);
+    setLoading(false);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -372,8 +364,7 @@ export default function MyFeedbacks() {
     try {
       await feedbackApi.delete(id);
       fetchFeedbacks();
-    } catch (error) {
-      console.error('Failed to delete feedback', error);
+    } catch (err) {
       alert('Failed to delete feedback');
     }
     setSubmitting(false);
@@ -383,7 +374,23 @@ export default function MyFeedbacks() {
 
   return (
     <PageWrapper>
-      <Navbar />
+      <Header>
+        <HeaderContent>
+          <Logo>
+            <LogoIcon>U</LogoIcon>
+            University Portal
+          </Logo>
+          <HeaderRight>
+            <UserBadge>Student: {user?.email?.split('@')[0]}</UserBadge>
+            <Button variant="secondary" size="sm" onClick={() => navigate('/home')}>
+              Dashboard
+            </Button>
+            <Button variant="secondary" size="sm" onClick={logout}>
+              Logout
+            </Button>
+          </HeaderRight>
+        </HeaderContent>
+      </Header>
 
       <Main>
         <BackButton onClick={() => navigate('/home')}>← Back to Dashboard</BackButton>
@@ -424,12 +431,20 @@ export default function MyFeedbacks() {
             <FormRow>
               <div>
                 <Label htmlFor="rating">Rating</Label>
-                          <select
-                            name="rating"
-                            value={formData.rating}
-                            onChange={handleChange}
-                            style={selectStyles}
-                          >
+                <select
+                  name="rating"
+                  value={formData.rating}
+                  onChange={handleChange}
+                  style={{
+                    width: '100%',
+                    height: '2.5rem',
+                    padding: '0 0.75rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid var(--input)',
+                    backgroundColor: 'var(--background)',
+                    fontSize: '0.875rem',
+                  }}
+                >
                   <option value={5}>5 Stars - Excellent</option>
                   <option value={4}>4 Stars - Very Good</option>
                   <option value={3}>3 Stars - Good</option>
@@ -500,7 +515,14 @@ export default function MyFeedbacks() {
                             name="rating"
                             value={editData.rating}
                             onChange={handleEditChange}
-                            style={selectStyles}
+                            style={{
+                              width: '100%',
+                              height: '2.5rem',
+                              padding: '0 0.75rem',
+                              borderRadius: '0.5rem',
+                              border: '1px solid var(--input)',
+                              backgroundColor: 'var(--background)',
+                            }}
                           >
                             <option value={5}>5 Stars</option>
                             <option value={4}>4 Stars</option>

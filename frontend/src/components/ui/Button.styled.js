@@ -22,7 +22,6 @@ const variants = {
     background-color: var(--primary);
     color: var(--primary-foreground);
     box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39);
-
     &:hover:not(:disabled) {
       background-color: #1d4ed8;
       box-shadow: 0 6px 20px rgba(37, 99, 235, 0.23);
@@ -33,7 +32,6 @@ const variants = {
     background-color: var(--destructive);
     color: var(--destructive-foreground);
     box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.39);
-
     &:hover:not(:disabled) {
       background-color: #dc2626;
       box-shadow: 0 6px 20px rgba(239, 68, 68, 0.23);
@@ -44,7 +42,6 @@ const variants = {
     border: 2px solid var(--input);
     background-color: transparent;
     color: var(--foreground);
-
     &:hover:not(:disabled) {
       background-color: var(--accent);
       border-color: var(--primary);
@@ -54,7 +51,6 @@ const variants = {
   secondary: css`
     background-color: var(--secondary);
     color: var(--secondary-foreground);
-
     &:hover:not(:disabled) {
       background-color: #c7d2fe;
       transform: translateY(-1px);
@@ -63,7 +59,6 @@ const variants = {
   ghost: css`
     background-color: transparent;
     color: var(--foreground);
-
     &:hover:not(:disabled) {
       background-color: var(--accent);
       color: var(--primary);
@@ -73,7 +68,6 @@ const variants = {
     background-color: transparent;
     color: var(--primary);
     text-decoration: none;
-
     &:hover:not(:disabled) {
       color: #1e40af;
       text-decoration: underline;
@@ -106,11 +100,7 @@ export const Button = styled.button`
   ${baseStyles}
   ${({ $variant = 'default' }) => variants[$variant]}
   ${({ $size = 'default' }) => sizes[$size]}
-  ${({ $fullWidth }) =>
-    $fullWidth &&
-    css`
-      width: 100%;
-    `}
+  ${({ $fullWidth }) => $fullWidth && css`width: 100%;`}
 `;
 
 export const buttonVariants = (variant = 'default') => variants[variant];

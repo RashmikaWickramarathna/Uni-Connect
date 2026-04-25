@@ -1,29 +1,45 @@
-// backend/Routes/adminRoutes.js
-// UniConnect – Admin Routes
-
-// UniConnect – Admin Routes
-
 const express = require("express");
-const router  = express.Router();
+const router = express.Router();
+const jwt = require("jsonwebtoken");
+const Admin = require("../Model/Admin");
 
-const {
-  getAllBookings,
-  approveBooking,
-  rejectBooking,
-} = require("../controllers/adminController");
+const JWT_SECRET = "your_secret_key_here"; // ⚠️ move to .env in production
 
-const {
-  validateObjectId,
-  validateAdminBookingAction,
-} = require("../src/middleware/validationMiddleware");
+// POST /api/admin/login
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
 
-// GET  /api/admin/bookings               – get all ticket bookings
-router.get("/bookings", getAllBookings);
+  try {
+    const admin = await Admin.findOne({ admin_username: email });
+    if (!admin) return res.status(401).json({ success: false, message: "Invalid email or password" });
 
-// PATCH /api/admin/bookings/:id/approve  – manually approve cash booking
-router.patch("/bookings/:id/approve", validateAdminBookingAction, approveBooking);
+    const isMatch = admin.admin_pwd === password;
+    if (!isMatch) return res.status(401).json({ success: false, message: "Invalid email or password" });
 
-// PATCH /api/admin/bookings/:id/reject   – reject booking with reason
-router.patch("/bookings/:id/reject", validateAdminBookingAction, rejectBooking);
+    const token = jwt.sign({ id: admin._id, email: admin.admin_username }, JWT_SECRET, { expiresIn: "2h" });
+    res.status(200).json({ success: true, token, message: "Login successful" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Server error", error: err });
+  }
+});
+
+// Auth middleware
+function authMiddleware(req, res, next) {
+  let token = req.headers["authorization"];
+  if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+  if (token.startsWith("Bearer ")) token = token.slice(7);
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(401).json({ message: "Unauthorized" });
+    req.adminId = decoded.id;
+    next();
+  });
+}
+
+// GET /api/admin/dashboard
+router.get("/dashboard", authMiddleware, (req, res) => {
+  res.json({ message: "Welcome to the secure admin dashboard!" });
+});
 
 module.exports = router;

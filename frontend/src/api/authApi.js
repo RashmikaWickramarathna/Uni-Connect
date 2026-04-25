@@ -1,4 +1,4 @@
-import api from "./apiClient";
+import api from './axios';
 
 export const authApi = {
   signup: (data) => api.post('/users/signup', data),
